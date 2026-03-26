@@ -25,13 +25,14 @@ void print_usage(char *progname)
 	printf("%s usage: \n", progname);
 	printf("  -i(--ipaddr): sepcify server IP address\n");
 	printf("  -p(--port): sepcify server port.\n");
-	printf("  -d(--dnr):donmain name resolution.\n");
+	printf("  -s(--sleep: sleep time setting\n");
+	printf("  -d(--dnr): donmain name resolution.\n");
 	printf("  -h(--Help): print this help information.\n");
 
 	return ;
 }
 
-int get_temp(float *temp)
+double get_temp()
 {
 	char                    w1_path[50] = "/sys/devices/w1_bus_master1/";
 	char					buf[128];
@@ -40,6 +41,8 @@ int get_temp(float *temp)
 	int 					find;
 	int 					fd;
 	char					*tp;
+	double 					temp;
+
 	if(!temp)
 	{
 		return -1;
@@ -51,7 +54,7 @@ int get_temp(float *temp)
 		return -2;
 	}
 
-	while((direntp = readdir(dirp)) == NULL)  
+	while((direntp = readdir(dirp)) != NULL)  
 	{
 		strstr(direntp->d_name, "28-");
 		strcpy(buf, direntp->d_name);
@@ -92,7 +95,8 @@ int get_temp(float *temp)
 	}
 
 	tp+=2;
-	*temp = atof(tp)/1000; 
+	temp = atof(tp)/1000; 
+	return temp;
 
 	cleanup:
 		close(fd);
