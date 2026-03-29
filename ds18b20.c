@@ -17,7 +17,7 @@ static int find_sn(char *sn, size_t sn_len)
 	int 			found = 0;
 	if(sn == NULL || sn_len == 0)
 	{
-		printf("sn/sn_len can't be NULL\/0\n");
+		printf("sn/sn_len can't be NULL\n");
 		return -6;
 	}
 
@@ -43,7 +43,7 @@ static int find_sn(char *sn, size_t sn_len)
 
 	if(!found)
 	{
-		printf("find "28-" file faliure: %s\n", strerror(errno));
+		printf("find '28-' file faliure: %s\n", strerror(errno));
 		return -2;
 	}
 
@@ -59,12 +59,12 @@ static int read_data(const char *sn, char *buf, size_t buf_len)
 	ssize_t 	rt;
 
 	memset(w1_path, 0, sizeof(w1_path));
-	strncpy(w1_path, W1_BASE_PATH， sizeof(w1_path));
+	strncpy(w1_path, W1_BASE_PATH, sizeof(w1_path));
 	strncat(w1_path, sn, sizeof(w1_path)-strlen(w1_path));
 	strncat(w1_path, "/w1_slave", sizeof(w1_path)-strlen(w1_path));
 
-	fd = open(w1_path, O_RDONLY);
-	if(fd < 0)
+	file_fd = open(w1_path, O_RDONLY);
+	if(file_fd < 0)
 	{
 		printf("open file %s failure: %s\n", w1_path, strerror(errno));
 		return -1;
