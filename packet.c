@@ -13,17 +13,39 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include "packet.h"
+#include "cJSON.h"
 
-void date_packet(char *time, float *temperature, char *buf, size_t buf_len)
+int date_packet(char *time, float *temperature, char *buf, size_t buf_len)
 {
-		char		temp_buf[32];
-		
-		memset(buf, 0, buf_len);
-		strncat(buf, "rpi3b001", buf_len);
-		strncat(buf, time, buf_len-strlen(buf));
-		strncat(buf, ",", buf_len-strlen(buf));
-		snprint(temp_buf, sizeof(temp_buf), "%.2f", temperature);
-		strncat(buf, temp_buf, buf_len-strlen(buf));
-}
+	char			*id = "rpi3b001";
+	char			*json_str = NULL;
 
+	cJSON *root = cJSON_CreateObject();
+	if(!root)
+	{
+		printf("Create cJSON object failure: %s\n", strerror(errno));
+		return -1;
+	}
+
+	cJSON_AddStringToObject(root, "ID", id);
+	cJSON_AddStringToObject(root, "TIME", time);
+	cJSON_AddNumberToObject(root, "TEMPERATURE", *temperature);
+	
+	json_str = cJSON_Print(root);
+	if(!json_str)
+	{
+		printf("cJson to string failure: %s\n", strerror(errno));
+		cJSON_Delete(root);
+		return -2;
+	}
+
+	memset(buf, 0, buf_len);
+	strcpy(buf, json_str);
+	
+	free(json_str);
+	cJSON_Delete(root);
+	return 0;
+	
+}
