@@ -24,6 +24,7 @@
 #include <getopt.h>
 #include "socket_client.h"
 #include "ds18b20.h"
+#include "packet.h"
 
 void print_usage(char *program)
 {
@@ -157,19 +158,19 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 		get_time(time, sizeof(time));
-
-		memset(buf, 0, sizeof(buf));
-		strncat(buf, "rpi3b001,", sizeof(buf)-strlen(buf)-1);
-		strncat(buf, time, sizeof(buf)-strlen(buf)-1);
 	
 		if(read_temperature(temp) < 0)
 		{
 			printf("get temperature failed: %s\n", strerror(errno));
 			return -5;
 		}
-		strncat(buf, ",", sizeof(buf)-strlen(buf)-1);
-		snprintf(temp_buf, sizeof(temp_buf), "%.2f", *temp);
-		strncat(buf, temp_buf, sizeof(buf)-strlen(buf)-1);
+		
+		if(date_packet(time, temp, buf, sizeof(buf)) < 0)
+		{
+			printf("set data format failure: %s\n", strerror(errno));
+			return -6;
+		}
+
 
 		if(write(fd1, buf, strlen(buf)) < 0)
 		{
