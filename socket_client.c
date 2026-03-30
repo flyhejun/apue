@@ -164,13 +164,12 @@ int main(int argc, char *argv[])
 			printf("get temperature failed: %s\n", strerror(errno));
 			return -5;
 		}
-		
+	
 		if(date_packet(time, temp, buf, sizeof(buf)) < 0)
 		{
 			printf("set data format failure: %s\n", strerror(errno));
 			return -6;
 		}
-
 
 		if(write(fd1, buf, strlen(buf)) < 0)
 		{
