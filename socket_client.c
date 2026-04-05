@@ -26,7 +26,7 @@
 #include "ds18b20.h"
 #include "packet.h"
 
-void print_usage(char *program)
+static void print_usage(char *program)
 {
 	printf("%s usage: \n", program);
 	printf("  -i(--ipaddr): sepcify server port.\n");
@@ -84,10 +84,11 @@ int main(int argc, char *argv[])
 	struct addrinfo			*result=NULL;
 	struct sockaddr_in		*dnsip;
 	
-	struct timeval			tv = {sleep_t-1, 0};
-	int						rc = 0;
-	char					buf_r[512];
+	int						rs = 0;
 	int						cout = 0;
+	sqlite3_stmt			*stmt;
+	sqlite3 				*db;
+
 	while ((ch = getopt_long(argc, argv, "i:p:h:s:d", opts, NULL)) != -1)
 	{
 		switch(ch)
@@ -179,16 +180,39 @@ int main(int argc, char *argv[])
 		rc = write(fd1, buf, strlen(buf));
 		if(rc <= 0 && cout < 100)
 		{
-			printf("Connecton closed by accident...try to connect\n");
-			if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+			char 			id_buf;
+			char			time_buf;
+			double			temp_buf;
+		
+			printf("Connection closed by accident...try to connect\n");
+			if((fd1=connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)))<0)
 			{
 				cout+=1;
+				temporary_data_in(db, buf);
 			}
-			else
+			else if(fd1 > 0)
 			{		
 				printf("Reconnect successfully, send data again\n");
-			
-				write(fd1, buf, sizeof(buf));
+				sql = "SELECT id, time, temperature FROM temp_recds";
+				rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+				if(rs != SQLITE_OK)
+				{
+					printf("prepare failure；%s\m", sqlite3_errmsg(db));
+					sqlite3_close(db);
+					return -7
+				}
+				while((rs = sqlite3_step(stmt)) == SQLITE_ROW)
+				{
+					memset(buf, 0, sizeof(buf));
+					id_buf = sqlite3_column_text(stmt, 0);
+					time_buf = sqlite3_column_text(stmt, 1);
+					temp_buf = sqlite3_column_double(stmt, 2);
+					date_packet(id_buf, temp_buf, buf, sizeof(buf));
+					write(fd1, buf, strlen(buf));
+
+				}
+				cout = 0;	
+
 			}
 		}
 		else

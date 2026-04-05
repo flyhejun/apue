@@ -185,7 +185,7 @@ int main (int argc, char **argv)
 	sql = "CREATE TABLE TEMP_RECDS(" \
 		   "ID 				TEXT    NOT NULL," \
 		   "TIME            TEXT    NOT NULL," \
-		   "TEMPERATURE     TEXT    NOT NULL);";
+		   "TEMPERATURE     REAL    NOT NULL);";
 	rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
 	if(rc != SQLITE_OK)
 	{
@@ -272,7 +272,7 @@ int main (int argc, char **argv)
 
 					sqlite3_bind_text(stmt, 1, data[0], -1, SQLITE_STATIC);
 					sqlite3_bind_text(stmt, 2, data[1], -1, SQLITE_STATIC);
-					sqlite3_bind_text(stmt, 3, data[2], -1, SQLITE_STATIC);
+					sqlite3_bind_real(stmt, 3, data[2], -1, SQLITE_STATIC);
 
 					rc = sqlite3_step(stmt);
 					if(rc != SQLITE_DONE)

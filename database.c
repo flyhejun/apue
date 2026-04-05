@@ -19,7 +19,7 @@
 #include "database.h"
 static int table_exist(sqlite3 *db)
 {
-	const char 			*table_name = "TEMP";
+	const char 			*table_name = "TEMP_RECDS";
 	const char			*sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
 	sqlite3_stmt		*stmt;
 	int					exist = 0;
@@ -58,7 +58,7 @@ static void temporary_repo(sqlite3 *db)
 
 	if(table_exist(db) != 1)
 	{
-		sql = "CREATE TABLE TEMP(" \
+		sql = "CREATE TABLE TEMP_RECDS(" \
 			   "ID				TEXT	NOT NULL," \
 			   "TIME			TEXT	NOT NULL," \
 			   "TEMPERATURE		REAL	NOT NULL);";
