@@ -177,27 +177,27 @@ int main(int argc, char *argv[])
 		}
 
 		rc = write(fd1, buf, strlen(buf));
-		if(rc > 0)
-		{
-			printf("Write data to server [%s:%d] failure: %s\n", servip, port, strerror(errno));		
-		}
-		printf("Write to server[%s:%d] successfully\n", servip, port);
-		
-			printf("Server ip close connect\n");
-		}
-		else
+		if(rc < 0 && cout < 100)
 		{
 			printf("Connecton closed by accident...try to connect\n");
 			if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 			{
 				cout+=1;
-				printf("after %d seconds try again, number[%d]\n", sleep_t-1; cout);
 			}
 			else
-			{
+			{		
 				printf("Reconnect successfully, send data again\n");
+			
 				write(fd1, buf, sizeof(buf));
 			}
+		}
+		else if(rc == 0)
+		{
+			printf("Server close connect\n");
+		}
+		else
+		{
+			printf("Write %d bytes data successfully\n", rc);
 		}
 		sleep(sleep_t);
 	}
