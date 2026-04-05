@@ -182,8 +182,8 @@ int main (int argc, char **argv)
 	}
 	printf("create/open databases successfully!\n");
 	 
-	sql = "CREATE TABLE TEMP(" \
-		   "ID TEXT PRIMARY KEY     NOT NULL," \
+	sql = "CREATE TABLE TEMP_RECDS(" \
+		   "ID 				TEXT    NOT NULL," \
 		   "TIME            TEXT    NOT NULL," \
 		   "TEMPERATURE     TEXT    NOT NULL);";
 	rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
@@ -262,7 +262,7 @@ int main (int argc, char **argv)
 						token = strtok_r(buf, ",", &saveptr);
 						t+=1;
 					}
-					sql = "INSERT INTO temp (ID, TIME, TEMPERATURE) VALUES (?, ?, ?);";
+					sql = "INSERT INTO temp_recds (ID, TIME, TEMPERATURE) VALUES (?, ?, ?);";
 					rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 					if(rc != SQLITE_OK)
 					{
