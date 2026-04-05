@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 		}
 
 		rc = write(fd1, buf, strlen(buf));
-		if(rc < 0 && cout < 100)
+		if(rc <= 0 && cout < 100)
 		{
 			printf("Connecton closed by accident...try to connect\n");
 			if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
@@ -190,10 +190,6 @@ int main(int argc, char *argv[])
 			
 				write(fd1, buf, sizeof(buf));
 			}
-		}
-		else if(rc == 0)
-		{
-			printf("Server close connect\n");
 		}
 		else
 		{
