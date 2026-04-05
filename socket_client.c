@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	int						fd1 = -1;
 	struct sockaddr_in 		serv_addr;
 
-	char 					buf[1024];	
+	char 					buf[512];	
 	/*time var*/
 	char					time[64];
  	/*temp var*/
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	char					temp_buf[32];
 	
 	int 					rv;
-	int						sleep_t = 10;
+	int						sleep_t = 5;
 
 	int						ch;
 	struct option opts[] = {
@@ -84,6 +84,10 @@ int main(int argc, char *argv[])
 	struct addrinfo			*result=NULL;
 	struct sockaddr_in		*dnsip;
 	
+	struct timeval			tv = {sleep_t-1, 0};
+	int						rc = 0;
+	char					buf_r[512];
+	int						cout = 0;
 	while ((ch = getopt_long(argc, argv, "i:p:h:s:d", opts, NULL)) != -1)
 	{
 		switch(ch)
@@ -155,6 +159,7 @@ int main(int argc, char *argv[])
 	}
 	printf("Connect to server [%s:%d] sucessfully!\n");
 
+	setsockopt(fd1, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 	while(1)
 	{
 		get_time(time, sizeof(time));
@@ -171,18 +176,32 @@ int main(int argc, char *argv[])
 			return -6;
 		}
 
-		if(write(fd1, buf, strlen(buf)) < 0)
+		rc = write(fd1, buf, strlen(buf));
+		if(rc > 0)
 		{
 			printf("Write data to server [%s:%d] failure: %s\n", servip, port, strerror(errno));		
-			goto cleanup;
 		}
 		printf("Write to server[%s:%d] successfully\n", servip, port);
-
+		
+			printf("Server ip close connect\n");
+		}
+		else
+		{
+			printf("Connecton closed by accident...try to connect\n");
+			if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+			{
+				cout+=1;
+				printf("after %d seconds try again, number[%d]\n", sleep_t-1; cout);
+			}
+			else
+			{
+				printf("Reconnect successfully, send data again\n");
+				write(fd1, buf, sizeof(buf));
+			}
+		}
 		sleep(sleep_t);
 	}
 	
-
-cleanup:
 	close(fd1);
 	return 0;
 }
