@@ -21,8 +21,6 @@ extern "C" {
 
 #include <stddef.h>
 
-void temperary_repo(sqlite *db);
-
 int temperary_data_in(sqlite3 *db, char	*json_buf);
 
 #ifdef __cplusplus

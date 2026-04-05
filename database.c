@@ -43,9 +43,8 @@ static int table_exist(sqlite3 *db)
 	return exist;
 }
 
-void temporary_repo()
+static void temporary_repo(sqlite3 *db)
 {
-	sqlite3 		*db;
 	char			*zErrMSg = NULL;
 	char 			*sql = NULL;
 	sqlite3_stmt	*stmt;
@@ -74,7 +73,7 @@ void temporary_repo()
 	}
 }
 
-void temporary_data_in(sqlite3 *db, char *json_buf)
+int temporary_data_in(sqlite3 *db, char *json_buf)
 {
 	char			*sql = NULL;
 	sqlite3_stmt	*stmt;
@@ -82,7 +81,8 @@ void temporary_data_in(sqlite3 *db, char *json_buf)
 	char			*id_item;
 	char			*time_item;
 	float			*temp_item;
-
+	
+	temporary_repo(db);
 	sql = "INSERT INTO TEMP (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
 	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 	if(rc != SQLITE_OK)
