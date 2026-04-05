@@ -241,11 +241,6 @@ int main (int argc, char **argv)
 			
 			else if(events[i].events & EPOLLIN)
 			{	
-					char 	*token = NULL;
-					char 	*saveptr = NULL;
-					char	*data[3];
-					int 	t = 0;
-
 					memset(buf, 0, sizeof(buf));
 					rv = read(fd, buf, sizeof(buf));
 					if(rv <= 0)
@@ -255,34 +250,7 @@ int main (int argc, char **argv)
 						close(fd);
 						break;
 					}
-					token = strtok_r(buf, ",", &saveptr);
-					while(token != NULL)
-					{
-						data[t] = token;
-						token = strtok_r(buf, ",", &saveptr);
-						t+=1;
-					}
-					sql = "INSERT INTO temp_recds (ID, TIME, TEMPERATURE) VALUES (?, ?, ?);";
-					rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-					if(rc != SQLITE_OK)
-					{
-						fprintf(stderr, "prepare failure: %s\n", sqlite3_errmsg(db));
-						return rc;
-					}
-
-					sqlite3_bind_text(stmt, 1, data[0], -1, SQLITE_STATIC);
-					sqlite3_bind_text(stmt, 2, data[1], -1, SQLITE_STATIC);
-					sqlite3_bind_real(stmt, 3, data[2], -1, SQLITE_STATIC);
-
-					rc = sqlite3_step(stmt);
-					if(rc != SQLITE_DONE)
-					{
-						fprintf(stderr, "执行失败: %s\n", sqlite3_errmsg(db));
-						sqlite3_finalize(stmt);
-						return rc;
-					}
-
-					sqlite3_finalize(stmt);
+					temp_data_in(db, buf);
 					printf("Record successfully: %s,%s,%s\n", data[0], data[1], data[2]);
 			}
 		}

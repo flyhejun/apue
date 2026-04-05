@@ -49,7 +49,7 @@ static void temporary_repo(sqlite3 *db)
 	char 			*sql = NULL;
 	sqlite3_stmt	*stmt;
 
-	int	rc = sqlite3_open("temporary_date", &db);
+	int	rc = sqlite3_open("temp.db", &db);
 	if(rc)
 	{
 		printf("Create or open database failure: %s\n", sqlite3_errmsg(db));
@@ -73,7 +73,7 @@ static void temporary_repo(sqlite3 *db)
 	}
 }
 
-int temporary_data_in(sqlite3 *db, char *json_buf)
+int temp_data_in(sqlite3 *db, char *json_buf)
 {
 	char			*sql = NULL;
 	sqlite3_stmt	*stmt;
@@ -83,7 +83,7 @@ int temporary_data_in(sqlite3 *db, char *json_buf)
 	float			*temp_item;
 	
 	temporary_repo(db);
-	sql = "INSERT INTO TEMP (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
+	sql = "INSERT INTO TEMP_RECDS (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
 	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 	if(rc != SQLITE_OK)
 	{
@@ -117,7 +117,7 @@ int temporary_data_in(sqlite3 *db, char *json_buf)
 
 	sqlite3_bind_text(stmt, 1, id_item, -1, SQLITE_STATIC);
 	sqlite3_bind_text(stmt, 2, time_item, -1, SQLITE_STATIC);
-	sqlite3_bind_text(stmt, 3, temp_item, -1, SQLITE_STATIC);
+	sqlite3_bind_real(stmt, 3, temp_item, -1, SQLITE_STATIC);
 
 	rc = sqlite3_step(stmt);
 	if(rc != SQLTIE_OK)
