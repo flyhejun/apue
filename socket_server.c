@@ -28,6 +28,8 @@
 #include <sys/epoll.h>
 #include "socket_server.h"
 #include "database.h"
+#include "packet.h"
+#include "cJSON.h"
 
 #define MAX_EVENTS		1024
 #define	BACKLOG			13			/*MAX LISTEN FDS  */
@@ -77,14 +79,6 @@ int main (int argc, char **argv)
 	int						addr_len = sizeof(cli_addr);
 	int						port = 0;
 	int						pid;
-
-	/*ID,TIME,TMEP var*/
-	char					*time = NULL;
-	char 					*id = NULL;
-	char					*temp = NULL;
-	char					*sp1;
-	char					*sp2;
-	int						len = 0;
 
 	/*sqlite3 var*/
 	sqlite3					*db;
@@ -239,14 +233,16 @@ int main (int argc, char **argv)
 						close(fd);
 						break;
 					}
-					temp_data_in(db, buf);
-					printf("Record successfully: %s,%s,%s\n", data[0], data[1], data[2]);
+					if(temp_data_in(db, buf) == 0)
+					{
+						printf("Record successfully\n");
+					}
 			}
 		}
-	}
 
-	close(db);
+	sqlite3_close(db);
 	close(listen_fd);
 	return 0;
-} 
+	}
+}
 

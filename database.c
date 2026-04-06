@@ -143,6 +143,7 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	}
 
 	sqlite3_finalize(stmt);
+	return 0;
 }
 
 
