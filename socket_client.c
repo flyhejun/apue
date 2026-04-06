@@ -22,10 +22,13 @@
 #include <unistd.h>
 #include <time.h>
 #include <getopt.h>
+#include <sqlite3.h>
 #include "socket_client.h"
 #include "ds18b20.h"
 #include "packet.h"
-
+#include "database.h"
+#include "cJSON.h"
+				
 static void print_usage(char *program)
 {
 	printf("%s usage: \n", program);
@@ -63,7 +66,7 @@ int main(int argc, char *argv[])
 	/*time var*/
 	char					time[64];
  	/*temp var*/
-	float					*temp;
+	double					*temp;
 	char					temp_buf[32];
 	
 	int 					rv;
@@ -88,6 +91,7 @@ int main(int argc, char *argv[])
 	int						cout = 0;
 	sqlite3_stmt			*stmt;
 	sqlite3 				*db;
+	char					*sql = NULL;
 
 	while ((ch = getopt_long(argc, argv, "i:p:h:s:d", opts, NULL)) != -1)
 	{
@@ -160,7 +164,6 @@ int main(int argc, char *argv[])
 	}
 	printf("Connect to server [%s:%d] sucessfully!\n");
 
-	setsockopt(fd1, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 	while(1)
 	{
 		get_time(time, sizeof(time));
@@ -180,15 +183,15 @@ int main(int argc, char *argv[])
 		rc = write(fd1, buf, strlen(buf));
 		if(rc <= 0 && cout < 100)
 		{
-			char 			id_buf;
-			char			time_buf;
-			double			temp_buf;
+			const char 			*id_buf = NULL;
+			const char			*time_buf = NULL;
+			double				temp_buf = 0;
 		
 			printf("Connection closed by accident...try to connect\n");
 			if((fd1=connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)))<0)
 			{
 				cout+=1;
-				temporary_data_in(db, buf);
+				temp_data_in(db, buf);
 			}
 			else if(fd1 > 0)
 			{		
@@ -197,9 +200,9 @@ int main(int argc, char *argv[])
 				rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 				if(rs != SQLITE_OK)
 				{
-					printf("prepare failure；%s\m", sqlite3_errmsg(db));
+					printf("prepare failure；%s\n", sqlite3_errmsg(db));
 					sqlite3_close(db);
-					return -7
+					return -7;
 				}
 				while((rs = sqlite3_step(stmt)) == SQLITE_ROW)
 				{
@@ -207,9 +210,13 @@ int main(int argc, char *argv[])
 					id_buf = sqlite3_column_text(stmt, 0);
 					time_buf = sqlite3_column_text(stmt, 1);
 					temp_buf = sqlite3_column_double(stmt, 2);
-					date_packet(id_buf, temp_buf, buf, sizeof(buf));
+					char *buf_id = strdup(id_buf);
+					char *buf_time = strdup(time_buf);
+					date_packet(buf_time, &temp_buf, buf, sizeof(buf));
 					write(fd1, buf, strlen(buf));
-
+					
+					free(buf_id);
+					free(buf_time);
 				}
 				cout = 0;	
 

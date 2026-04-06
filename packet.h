@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-int date_packet(char *time, float *temperature, char *buf, size_t buf_len);
+int date_packet(char *time, double *temperature, char *buf, size_t buf_len);
 
 #ifdef _Cplusplus
 

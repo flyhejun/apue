@@ -83,7 +83,7 @@ static int read_data(const char *sn, char *buf, size_t buf_len)
 	return 0;
 }
 
-int 	read_temperature(float *temperature)
+int 	read_temperature(double *temperature)
 {
 	char		sn[64];
 	char		buf[128];

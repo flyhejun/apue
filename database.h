@@ -13,15 +13,15 @@
 
 #ifndef DATABASE_H
 #define DATABASE_H
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stddef.h>
+int callback(void *NotUsed,int argc, char *argv[], char **azColName);
 
-int temperary_data_in(sqlite3 *db, char	*json_buf);
+int temp_data_in(sqlite3 *db, char	*json_buf);
 
 #ifdef __cplusplus
 

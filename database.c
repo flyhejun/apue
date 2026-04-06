@@ -16,7 +16,22 @@
 #include <sqlite3.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include "database.h"
+#include "cJSON.h"
+				
+
+int callback(void *NotUsed, int argc, char *argv[], char **azColName)
+{
+	int	i;
+	for(i=0; i<argc; i++)
+	{
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : NULL);
+	}
+	printf("\n");
+	return 0;
+}
+
 static int table_exist(sqlite3 *db)
 {
 	const char 			*table_name = "TEMP_RECDS";
@@ -25,10 +40,10 @@ static int table_exist(sqlite3 *db)
 	int					exist = 0;
 	
 	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-	if(rc != SQLTIE_OK)
+	if(rc != SQLITE_OK)
 	{
 		printf("prepare failure: %s\n", sqlite3_errmsg(db));
-		return -1
+		return -1;
 	}
 
 	sqlite3_bind_text(stmt, 1, table_name, -1, SQLITE_STATIC);
@@ -80,7 +95,7 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	cJSON			*root = NULL;
 	char			*id_item;
 	char			*time_item;
-	float			*temp_item;
+	double			*temp_item;
 	
 	temporary_repo(db);
 	sql = "INSERT INTO TEMP_RECDS (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
@@ -102,7 +117,7 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	cJSON *time_str = cJSON_GetObjectItem(root, "TIME");
 	cJSON *temp_num = cJSON_GetObjectItem(root, "TEMPERATURE");
 
-	if(!cJSON_IsString(id_str)||!cJSON_IsString(time_str)||!cJSON_IsNumnber(temp_num))
+	if(!cJSON_IsString(id_str)||!cJSON_IsString(time_str)||!cJSON_IsNumber(temp_num))
 	{
 		printf("change format fail\n");
 		cJSON_Delete(root);
@@ -111,16 +126,16 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 
 	strcpy(id_item, id_str->valuestring);
 	strcpy(time_item, time_str->valuestring);
-	*temp_item = (float)temp_num->valuredouble;
+	*temp_item = (double)temp_num->valuedouble;
 
 	cJSON_Delete(root);
 
 	sqlite3_bind_text(stmt, 1, id_item, -1, SQLITE_STATIC);
 	sqlite3_bind_text(stmt, 2, time_item, -1, SQLITE_STATIC);
-	sqlite3_bind_real(stmt, 3, temp_item, -1, SQLITE_STATIC);
+	sqlite3_bind_double(stmt, 3, *temp_item);
 
 	rc = sqlite3_step(stmt);
-	if(rc != SQLTIE_OK)
+	if(rc != SQLITE_OK)
 	{
 		printf("step to table failure: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);

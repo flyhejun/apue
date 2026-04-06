@@ -16,7 +16,7 @@
 #include "packet.h"
 #include "cJSON.h"
 
-int date_packet(char *time, float *temperature, char *buf, size_t buf_len)
+int date_packet(char *time, double *temperature, char *buf, size_t buf_len)
 {
 	char			*id = "rpi3b001";
 	char			*json_str = NULL;

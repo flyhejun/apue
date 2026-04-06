@@ -25,6 +25,4 @@ void print_usage(char *program);
 
 void sig_handler(int signum);
 
-int callback(void *NotUsed,int argc, char *argv[], char **azColName);
-				
 #endif

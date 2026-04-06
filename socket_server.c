@@ -27,23 +27,12 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 #include "socket_server.h"
+#include "database.h"
 
 #define MAX_EVENTS		1024
 #define	BACKLOG			13			/*MAX LISTEN FDS  */
 
 int 	g_stop = 0;
-
-int callback(void *NotUsed,int argc, char *argv[], char **azColName)
-{
-	int i;
-	for(i=0; i<argc; i++)
-	{
-		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : NULL);
-	}
-	printf("\n");
-	return 0;
-}
-	
 
 void sig_handler(int signum)
 {

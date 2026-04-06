@@ -21,7 +21,7 @@ extern "C" {
 
 #include <stddef.h>
 
-int read_temperature(float *temperature);
+int read_temperature(double *temperature);
 
 #ifdef __cplusplus
 
