@@ -28,6 +28,7 @@
 #include "packet.h"
 #include "database.h"
 #include "cJSON.h"
+#include "log.h"
 				
 static void print_usage(char *program)
 {
@@ -186,58 +187,61 @@ int main(int argc, char *argv[])
 		log_trace("数据完成打包: %s", buf);
 
 		rc = write(fd1, buf, strlen(buf));
-		if(rc <= 0 && cout < 100)
+		while(rc < 0)
 		{
-			const char 			*id_buf = NULL;
-			const char			*time_buf = NULL;
-			double				temp_buf = 0;
+				const char 			*id_buf = NULL;
+				const char			*time_buf = NULL;
+				double				temp_buf = 0;
 		
-			log_warn("连接意外关闭，尝试重连(第%d次)", cout+1);
-			printf("Connection closed by accident...try to connect\n");
-			if((fd1=connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)))<0)
-			{
-				log_error("重连失败: %s", strerror(errno));
-				cout+=1;
-				log_info("数据存入本地临时库(第%d批)", cout);
-				temp_data_in(db, buf);
-			}
-			else if(fd1 > 0)
-			{		
-				log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
-				sql = "SELECT id, time, temperature FROM temp_recds";
-				rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-				if(rs != SQLITE_OK)
+				close(fd1);
+				log_warn("连接意外关闭，尝试重连(第%d次)", cout+1);
+				if((fd1=connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)))<0)
 				{
-					log_error("SQL准备失败: %s", sqlite3_errmsg(db));
-					sqlite3_close(db);
-					return -7;
+					log_error("重连失败: %s", strerror(errno));
+					cout+=1;
+					log_info("数据存入本地临时库(第%d批)", cout);
+					temp_data_in(db, buf);
 				}
-				log_debug("SQL准备就绪，开始遍历上传");
-				while((rs = sqlite3_step(stmt)) == SQLITE_ROW)
-				{
-					memset(buf, 0, sizeof(buf));
-					id_buf = sqlite3_column_text(stmt, 0);
-					time_buf = sqlite3_column_text(stmt, 1);
-					temp_buf = sqlite3_column_double(stmt, 2);
-					char *buf_id = strdup(id_buf);
-					char *buf_time = strdup(time_buf);
-					date_packet(buf_time, &temp_buf, buf, sizeof(buf));
-					log_trace("缓存记录上传: ID:%S, 时间: %s, 温度: .2f", id_buf, time_buf, temp_buf);
-					write(fd1, buf, strlen(buf));
-					
-					free(buf_id);
-					free(buf_time);
-				}
-				cout = 0;	
 
+				else if(fd1 > 0)
+				{		
+					log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
+					sql = "SELECT id, time, temperature FROM temp_recds";
+					rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+					if(rs != SQLITE_OK)
+					{
+						log_error("SQL准备失败: %s", sqlite3_errmsg(db));
+						sqlite3_close(db);
+						return -7;
+					}
+				
+					log_debug("SQL准备就绪，开始遍历上传");
+					while((rs = sqlite3_step(stmt)) == SQLITE_ROW)
+					{
+						memset(buf, 0, sizeof(buf));
+						id_buf = sqlite3_column_text(stmt, 0);
+						time_buf = sqlite3_column_text(stmt, 1);
+						temp_buf = sqlite3_column_double(stmt, 2);
+						char *buf_id = strdup(id_buf);
+						char *buf_time = strdup(time_buf);
+						date_packet(buf_time, &temp_buf, buf, sizeof(buf));
+						log_trace("缓存记录上传: ID:%S, 时间: %s, 温度: .2f", 
+									id_buf, time_buf, temp_buf);
+						rc = write(fd1, buf, strlen(buf));
+						
+						free(buf_id);
+						free(buf_time);
+					}
+					cout = 0;	
+				}
 			}
+			else
+			{
+				log_info("发送%d个字节数据成功", rc);
+			}
+
+			sleep(sleep_t);
 		}
-		else
-		{
-			log_info("发送%d个字节数据成功", rc);
-		}
-		sleep(sleep_t);
-	}
 	
 	close(fd1);
 
