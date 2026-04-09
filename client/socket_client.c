@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
 	sqlite3_stmt			*stmt;
 	sqlite3 				*db;
 	char					*sql = NULL;
+	int						updata_count = 0;
 
 	while ((ch = getopt_long(argc, argv, "i:p:h:s:d", opts, NULL)) != -1)
 	{
@@ -204,42 +205,43 @@ int main(int argc, char *argv[])
 				else 
 				{		
 					log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
-					sql = "SELECT id, time, temperature FROM temp_recds";
-					rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-					if(rs != SQLITE_OK)
-					{
-						log_error("SQL准备失败: %s", sqlite3_errmsg(db));
-						sqlite3_close(db);
-						return -7;
-					}
 				
-					log_debug("SQL准备就绪，开始遍历上传");
-					while((rs = sqlite3_step(stmt)) == SQLITE_ROW)
-					{
-						tempo_data_in(stmt, buf, sizeof(buf));
-						rc = write(fd1, buf, sizeof(buf));
-						if(rc > 0)
-						{
-							log_info("data reupdata.");
-							old_data_delete(db, "temp_recds");
-						}
-						else if(rc <= 0)
-						{
-							log_error("失去连接，错误: %s", strerror(errno));
-							break;
-						}
-	
-					}
 					cout = 0;	
 				}
-			}
-			else
-			{
+		}
+		else
+		{
 				log_info("发送%d个字节数据成功", rc);
-			}
+				sql = "SELECT id, time, temperature FROM temp_recds";
+				rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+				if(rs != SQLITE_OK)
+				{
+					log_error("SQL准备失败: %s", sqlite3_errmsg(db));
+					sqlite3_close(db);
+				}
+
+				log_debug("SQL准备就绪，开始遍历上传");
+				while((rs = sqlite3_step(stmt)) == SQLITE_ROW && updata_count < 10)
+				{
+					tempo_data_in(stmt, buf, sizeof(buf));
+					rc = write(fd1, buf, sizeof(buf));
+					if(rc > 0)
+					{
+						log_info("data reupdata.");
+						old_data_delete(db, "temp_recds");
+						updata_count++;
+					}
+					else if(rc <= 0)
+					{
+						log_error("失去连接，错误: %s", strerror(errno));
+						break;
+					}
+				}
+
+		}
 
 			sleep(sleep_t);
-		}
+	}
 	
 	close(fd1);
 
