@@ -30,6 +30,7 @@
 #include "database.h"
 #include "packet.h"
 #include "cJSON.h"
+#include "log.h"
 
 #define MAX_EVENTS		1024
 #define	BACKLOG			13			/*MAX LISTEN FDS  */
@@ -136,10 +137,10 @@ int main (int argc, char **argv)
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if(listen_fd < 0)
 	{
-		printf("create socket failure: %s\n", strerror(errno));
+		log_error("创建listen_fd失败: %s", strerror(errno));
 		return -1;
 	}
-	printf("create socket[%d] successfully!\n", listen_fd);
+	log_info("成功创建sock[%d]", listen_fd);
 
 	setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
@@ -150,7 +151,7 @@ int main (int argc, char **argv)
 
 	if(bind(listen_fd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
 	{
-		printf("bind on port[%d] failed: %s\n", port,  strerror(errno));
+		log_error("绑定到端口: %d 失败，错误分析: %s", port, strerror(errno));
 		return -2;
 	}
 	printf("socket[%d] bind on port[%d] successfully!\n", listen_fd, port);
@@ -239,10 +240,9 @@ int main (int argc, char **argv)
 					}
 			}
 		}
-
+	}
 	sqlite3_close(db);
 	close(listen_fd);
 	return 0;
-	}
 }
 
