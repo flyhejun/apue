@@ -158,30 +158,13 @@ int main (int argc, char **argv)
 
 	listen(listen_fd, BACKLOG);
 
-	rc = sqlite3_open("temp.db", &db);
-	if(rc)
-	{
-		printf("open/create databases failure: %s\n", strerror(errno));
-		exit(0);
-	}
-	printf("create/open databases successfully!\n");
-	 
-	sql = "CREATE TABLE TEMP_RECDS(" \
-		   "ID 				TEXT    NOT NULL," \
-		   "TIME            TEXT    NOT NULL," \
-		   "TEMPERATURE     REAL    NOT NULL);";
-	rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-	if(rc != SQLITE_OK)
-	{
-		printf("SQL  exec error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	}
-	printf("Table create successfully!\n");
+	temporary_repo(db);
+	log_info("数据库和数据表连接成功");
 	
 	epfd = epoll_create1(0);
 	if(epfd < 0)
 	{
-		printf("create epoll failure: %s\n", strerror(errno));
+		log_eror("创建epoll进程失败: %s", strerror(errno));
 		return -3;
 	}
 	
@@ -189,7 +172,7 @@ int main (int argc, char **argv)
 	ev.data.fd = listen_fd;
 	if(epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev) < 0)
 	{
-		printf("epoll_ctrl add listen_fd failure: %s\n", strerror(errno));
+		log_error("添加监听事件失败: %s", strerror(errno));
 		return -4;
 	}
 
@@ -198,9 +181,10 @@ int main (int argc, char **argv)
 		nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
 		if(nfds <= 0)
 		{
-			printf("poll failure: %s\n", strerror(errno));
+			log_error("无事件发生/发生错误: %s", strerror(errno));
 			continue;
 		}
+
 		for(int i=0; i<nfds; i++)
 		{
 			fd = events[i].data.fd;
@@ -209,16 +193,17 @@ int main (int argc, char **argv)
 				client_fd = accept(listen_fd, (struct sockaddr *)&cli_addr, &addr_len);
 				if(client_fd < 0)
 				{
-					printf("accept new client failure: %s\n", strerror(errno));
+					log_error("获取新的client_fd 失败: %s", strerror(errno));
 					continue;
 				}
-				printf("accept new client[%s:%d] with fd[%d]\n", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), client_fd);
+				log_info("连接上了新客户端[%s:%d], fd[%d]", 
+						inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), client_fd);	
 				
 				ev.events = EPOLLIN | EPOLLRDHUP;
 				ev.data.fd = client_fd;
 				if(epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) < 0)
 				{
-					perror("epoll_ctl add client");
+					log_error("添加新用户端失败");
 					close(client_fd);
 				}
 			}
@@ -229,14 +214,14 @@ int main (int argc, char **argv)
 					rv = read(fd, buf, sizeof(buf));
 					if(rv <= 0)
 					{
-						printf("socket[%d] get disconnected\n", fd);
+						log_error("socket[%d] 断开连接"，fd);
 						epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
 						close(fd);
 						break;
 					}
 					if(temp_data_in(db, buf) == 0)
 					{
-						printf("Record successfully\n");
+						log_info("成功记录新数据");
 					}
 			}
 		}

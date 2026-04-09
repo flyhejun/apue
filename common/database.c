@@ -69,7 +69,7 @@ static void temporary_repo(sqlite3 *db)
 	if(rc)
 	{
 		printf("Create or open database failure: %s\n", sqlite3_errmsg(db));
-		_exit(0);
+		_exit(1);
 	}
 
 	if(table_exist(db) != 1)
