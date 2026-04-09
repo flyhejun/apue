@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include "database.h"
 #include "cJSON.h"
+#include "log.h"
 				
 
 int callback(void *NotUsed, int argc, char *argv[], char **azColName)
@@ -81,7 +82,7 @@ static void temporary_repo(sqlite3 *db)
 		rc = sqlite3_exec(db, sql, callback, 0, &zErrMSg);
 		if(rc != SQLITE_OK)
 		{
-			printf("create table failure: %s\n", zErrMSg);
+			log_error("SQL操作失败: %s", zErrMsg);
 			sqlite3_free(zErrMSg);
 			_exit(1);
 		}
@@ -146,4 +147,38 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	return 0;
 }
 
+static void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size)
+{
+	const char 		*id_buf = NULL;
+	const char		*time_buf = NULL;
+	double 			temp_buf = 0;
 
+	char			*buf_if = NULL;
+	char			*buf_time = NULL;
+
+	memset(buf, 0, buf_size);
+	id_buf = sqlite3_column_text(stmt, 0);
+	time_buf = sqlite3_column_text(stmt, 1);
+	temp_buf = sqlite3_column_double(stmt, 2);
+	buf_id = strdup(id_buf);
+	buf_time = strdup(time_buf);
+	date_packet(buf_time, &temp_buf, buf, buf_size);
+	log_trace("缓存记录上传: ID:%S, 时间: %s, 温度: .2f", 
+							id_buf, time_buf, temp_buf);
+							
+	free(buf_id);
+	free(buf_time);
+}
+
+static int old_data_delete(sqlite3 *db, const char *table_name)
+{
+	char 		sql[256];
+
+	sprintf(sql, "DELETE FROM %s WHERE rowid IN "
+				 "(SELECT MIN(rowid) FROM %s)",
+				 table_name, table_name);
+	if(sqlite3_exec(db, sql, NULL,NULL, NULL) != SQLITE_OK)
+	{
+		log_error("delete oldest data failed: %s", sqlite3_errmsg(db));
+	}
+}

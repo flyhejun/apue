@@ -187,15 +187,13 @@ int main(int argc, char *argv[])
 		log_trace("数据完成打包: %s", buf);
 
 		rc = write(fd1, buf, strlen(buf));
-		while(rc < 0)
+		if(rc < 0)
 		{
-				const char 			*id_buf = NULL;
-				const char			*time_buf = NULL;
-				double				temp_buf = 0;
-		
 				close(fd1);
+				temporary_repo(db);
 				log_warn("连接意外关闭，尝试重连(第%d次)", cout+1);
-				if((fd1=connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)))<0)
+				fd1 = socket(AF_INET, SOCK_STREAM, 0);
+				if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr))==-1)
 				{
 					log_error("重连失败: %s", strerror(errno));
 					cout+=1;
@@ -203,7 +201,7 @@ int main(int argc, char *argv[])
 					temp_data_in(db, buf);
 				}
 
-				else if(fd1 > 0)
+				else 
 				{		
 					log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
 					sql = "SELECT id, time, temperature FROM temp_recds";
@@ -218,19 +216,19 @@ int main(int argc, char *argv[])
 					log_debug("SQL准备就绪，开始遍历上传");
 					while((rs = sqlite3_step(stmt)) == SQLITE_ROW)
 					{
-						memset(buf, 0, sizeof(buf));
-						id_buf = sqlite3_column_text(stmt, 0);
-						time_buf = sqlite3_column_text(stmt, 1);
-						temp_buf = sqlite3_column_double(stmt, 2);
-						char *buf_id = strdup(id_buf);
-						char *buf_time = strdup(time_buf);
-						date_packet(buf_time, &temp_buf, buf, sizeof(buf));
-						log_trace("缓存记录上传: ID:%S, 时间: %s, 温度: .2f", 
-									id_buf, time_buf, temp_buf);
-						rc = write(fd1, buf, strlen(buf));
-						
-						free(buf_id);
-						free(buf_time);
+						tempo_data_in(stmt, buf, sizeof(buf));
+						rc = write(fd1, buf, sizeof(buf));
+						if(rc > 0)
+						{
+							log_info("data reupdata.");
+							old_data_delete(db, "temp_recds");
+						}
+						else if(rc <= 0)
+						{
+							log_error("失去连接，错误: %s", strerror(errno));
+							break;
+						}
+	
 					}
 					cout = 0;	
 				}
