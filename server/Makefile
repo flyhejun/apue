@@ -2,7 +2,7 @@ C := gcc
 CFLAGS := -Wall -g -I/home/iot26/hejunfei/common
 LIBS := -lsqlite3 -lm
 
-#静态库（关键！）
+#静态库
 LIB := ../lib/libmylib.a
 
 TARGET := serv_prog
