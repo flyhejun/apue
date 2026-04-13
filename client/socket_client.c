@@ -67,10 +67,8 @@ int main(int argc, char *argv[])
 	/*time var*/
 	char					time[64];
  	/*temp var*/
-	double					*temp;
-	char					temp_buf[32];
+	double					*temp = NULL;
 	
-	int 					rv;
 	int						sleep_t = 5;
 
 	int						ch;
@@ -91,7 +89,7 @@ int main(int argc, char *argv[])
 	int						rs = 0;
 	int						cout = 0;
 	sqlite3_stmt			*stmt;
-	sqlite3 				*db;
+	sqlite3 				*db = NULL;
 	char					*sql = NULL;
 	int						updata_count = 0;
 
@@ -122,7 +120,7 @@ int main(int argc, char *argv[])
 	}
 
 	log_info("配置情况： IP:%s, Port:%d, 休眠时间:%d秒, 域名：%s",
-			 servip ? servip : "(null)", port, sleep_t, (dns != "www.123.com") ? dns : "(未使用)");
+			 servip ? servip : "(null)", port, sleep_t, strcmp(dns, "www.123.com") ? dns : "(未使用)");
 
 	if( !servip || !port)
 	{
@@ -130,7 +128,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if(dns != "www.123.com")
+	if(strcmp(dns, "www.123.com") != 0)
 	{
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = AF_INET;
@@ -154,7 +152,7 @@ int main(int argc, char *argv[])
 	fd1 = socket(AF_INET, SOCK_STREAM, 0);
 	if(fd1 < 0)
 	{
-		log_error("创建socket失败: %s"，strerror(errno));
+		log_error("创建socket失败: %s", strerror(errno));
 		return -3;
 	}
 
@@ -235,9 +233,9 @@ int main(int argc, char *argv[])
 					{
 						log_error("失去连接，错误: %s", strerror(errno));
 						break;
-					}
+					}	
 				}
-
+				updata_count = 0;
 		}
 
 			sleep(sleep_t);

@@ -23,6 +23,11 @@ int callback(void *NotUsed,int argc, char *argv[], char **azColName);
 
 int temp_data_in(sqlite3 *db, char	*json_buf);
 
+void temporary_repo(sqlite3 *db);
+
+void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size);
+
+int old_data_delete(sqlite3 *db, const char *table_name);
 #ifdef __cplusplus
 
 }

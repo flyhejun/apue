@@ -77,18 +77,13 @@ int main (int argc, char **argv)
 	int 					reuse = 1;
 	struct sockaddr_in		serv_addr;
 	struct sockaddr_in		cli_addr;
-	int						addr_len = sizeof(cli_addr);
+	socklen_t				addr_len = sizeof(cli_addr);
 	int						port = 0;
-	int						pid;
 
 	/*sqlite3 var*/
-	sqlite3					*db;
-	char					*sql;
-	char					*zErrMsg = NULL;
-	int						rc;
+	sqlite3					*db = NULL;
 	char					buf[512];
 	int						rv;
-	sqlite3_stmt			*stmt;
 
 	/*the others*/
 	int						debug = 0;
@@ -164,7 +159,7 @@ int main (int argc, char **argv)
 	epfd = epoll_create1(0);
 	if(epfd < 0)
 	{
-		log_eror("创建epoll进程失败: %s", strerror(errno));
+		log_error("创建epoll进程失败: %s", strerror(errno));
 		return -3;
 	}
 	
@@ -214,7 +209,7 @@ int main (int argc, char **argv)
 					rv = read(fd, buf, sizeof(buf));
 					if(rv <= 0)
 					{
-						log_error("socket[%d] 断开连接"，fd);
+						log_error("socket[%d] 断开连接", fd);
 						epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
 						close(fd);
 						break;

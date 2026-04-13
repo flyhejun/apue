@@ -24,7 +24,7 @@ static int find_sn(char *sn, size_t sn_len)
 	dirp = opendir(W1_BASE_PATH);
 	if(!dirp)
 	{
-		printf("open file % s failure: %s\n", W1_BASE_PATH, strerror(errno));
+		printf("open file %s failure: %s\n", W1_BASE_PATH, strerror(errno));
 		return -1;
 	}
 
