@@ -29,6 +29,7 @@
 #include "database.h"
 #include "cJSON.h"
 #include "log.h"
+#include "socket.h"
 				
 static void print_usage(char *program)
 {
@@ -56,21 +57,16 @@ int main(int argc, char *argv[])
 {
 	/*socket var*/
 	char					*servip = NULL;
-	char					ip_buf[64];
 	char					*dns = "www.123.com";
 	int						port = 0;
-	char					port_buf[8];
 	int						fd1 = -1;
 	struct sockaddr_in 		serv_addr;
-
 	char 					buf[512];	
 	/*time var*/
 	char					time[64];
  	/*temp var*/
 	double					*temp = NULL;
-	
 	int						sleep_t = 5;
-
 	int						ch;
 	struct option opts[] = {
 		{"ipaddr", required_argument, NULL, 'i'},
@@ -81,10 +77,7 @@ int main(int argc, char *argv[])
 		{NULL, 0, NULL, 0}
 	};
 
-	int 					rc;
-	struct addrinfo 		hints;
-	struct addrinfo			*result=NULL;
-	struct sockaddr_in		*dnsip;
+	int 					rc = 0;
 	
 	int						rs = 0;
 	int						cout = 0;
@@ -128,44 +121,28 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if(strcmp(dns, "www.123.com") != 0)
+	if(domain_handle(dns, port, servip) < 0)
 	{
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_INET;
-		hints.ai_socktype = SOCK_STREAM;
-	
-		snprintf(port_buf, sizeof(port_buf), "%d", port);
-		if((rc = getaddrinfo(dns, port_buf, &hints, &result)) != 0)
-		{
-			log_error("域名解析失败: %s:%p, 错误解析: %s", dns, port, gai_strerror(rc));
-			return -2;
-		}
-	
-		if(result != 0)
-		{
-			dnsip = (struct sockaddr_in *)result->ai_addr;	
-			inet_ntop(AF_INET, &(dnsip->sin_addr), ip_buf, sizeof(ip_buf));
-			strcpy(servip, ip_buf);
-		}
+		return -2;	
 	}
 
-	fd1 = socket(AF_INET, SOCK_STREAM, 0);
-	if(fd1 < 0)
+	fd1 = socket_init();
+	while(fd1 < 0)
 	{
-		log_error("创建socket失败: %s", strerror(errno));
-		return -3;
+		close(fd1);
+		fd1 = socket_init();
 	}
 
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(port);
-	inet_aton(servip, &serv_addr.sin_addr);
-	if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	if(socket_connect(fd1, servip, port, serv_addr) < 0)
 	{
-		log_error("与服务器端 %s:%d 连接失败: %s", servip, port, strerror(errno));
-		return -4;
+		while(cout < 5 || rc <  0)
+		{
+			rc = socket_reconnect(serv_addr, cout);
+		}		
+		
+		if(rc < 0)
+			return -3;
 	}
-	log_info("成功链接服务器 %s:%d", servip, port);
 
 	while(1)
 	{
@@ -190,21 +167,17 @@ int main(int argc, char *argv[])
 		{
 				close(fd1);
 				temporary_repo(db);
-				log_warn("连接意外关闭，尝试重连(第%d次)", cout+1);
-				fd1 = socket(AF_INET, SOCK_STREAM, 0);
-				if(connect(fd1, (struct sockaddr *)&serv_addr, sizeof(serv_addr))==-1)
+				log_warn("连接意外关闭，尝试重连(第%d次)", cout);
+				if((fd1 = socket_reconnect(serv_addr, cout)) < 0)
 				{
-					log_error("重连失败: %s", strerror(errno));
-					cout+=1;
-					log_info("数据存入本地临时库(第%d批)", cout);
-					temp_data_in(db, buf);
+					log_info("数据存入本地临时库(第%d批)", cout);	
+					temp_data_in(db,buf);
 				}
-
+				
 				else 
 				{		
 					log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
-				
-					cout = 0;	
+					cout = 0;
 				}
 		}
 		else

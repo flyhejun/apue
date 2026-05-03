@@ -5,8 +5,8 @@ LIBS := -lsqlite3 -lm
 #静态库
 LIB := ../lib/libmylib.a
 
-TARGET := serv_prog
-SOURCES := socket_server.c
+TARGET := /home/iot26/hejunfei/bin/serv_prog
+SOURCES := socket_server.c socket.c
 
 all:
 	$(CC) $(CFLAGS) $(SOURCES) $(LIB) -o $(TARGET) $(LIBS)

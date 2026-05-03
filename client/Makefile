@@ -7,8 +7,8 @@ LIB_DIR := /home/iot26/hejunfei/lib
 LIB := $(LIB_DIR)/libmylib.a
 
 # 源文件
-CLIENT_SRCS := ds18b20.c socket_client.c
-TARGET := cli_prog
+CLIENT_SRCS := ds18b20.c socket_client.c socket.c
+TARGET := /home/iot26/hejunfei/bin/cli_prog
 
 all:
 	$(CC) $(CFLAGS) $(CLIENT_SRCS) $(LIB) -o $(TARGET) $(LIBS)
