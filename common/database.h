@@ -19,15 +19,20 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-int callback(void *NotUsed,int argc, char *argv[], char **azColName);
+extern int callback(void *NotUsed,int argc, char *argv[], char **azColName);
 
-int temp_data_in(sqlite3 *db, char	*json_buf);
+extern int temp_data_in(sqlite3 *db, char	*json_buf);
 
-void temporary_repo(sqlite3 *db);
+extern sqlite3_stmt* data_exist(sqlite3 *db);
 
-void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size);
+extern int table_exist(sqlite3 *db);
 
-int old_data_delete(sqlite3 *db, const char *table_name);
+extern void temporary_repo(sqlite3 *db);
+
+extern void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size);
+
+extern int old_data_delete(sqlite3 *db, const char *table_name);
+
 #ifdef __cplusplus
 
 }

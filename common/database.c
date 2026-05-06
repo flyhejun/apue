@@ -35,7 +35,7 @@ int callback(void *NotUsed, int argc, char *argv[], char **azColName)
 	return 0;
 }
 
-static int table_exist(sqlite3 *db)
+int table_exist(sqlite3 *db)
 {
 	const char 			*table_name = "TEMP_RECDS";
 	const char			*sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
@@ -60,6 +60,24 @@ static int table_exist(sqlite3 *db)
 
 	return exist;
 }
+
+sqlite3_stmt* data_exist(sqlite3 *db)
+{
+	char			*sql = "SELECT id, time, temperature FROM temp_recds";
+	int				rs;
+	sqlite3_stmt	*stmt;
+
+	rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+	if(rs != SQLITE_OK)
+	{
+		log_error("SQL准备失败: %s", sqlite3_errmsg(db));
+		return NULL;
+	}
+
+	return stmt;
+}
+
 
 void temporary_repo(sqlite3 *db)
 {
