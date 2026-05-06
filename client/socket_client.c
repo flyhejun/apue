@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	/*time var*/
 	char					time[64];
  	/*temp var*/
-	double					*temp = NULL;
+	double					temp = 0.0;
 	int						sleep_t = 5;
 	int						ch;
 	struct option opts[] = {
@@ -132,31 +132,35 @@ int main(int argc, char *argv[])
 		fd1 = socket_init();
 	}
 
-	if(socket_connect(fd1, servip, port, serv_addr) < 0)
+	if(socket_connect(fd1, servip, port, &serv_addr) < 0)
 	{
-		while(cout < 5 || rc <  0)
+		rc = -1;
+		while(cout < 5 && rc < 0)
 		{
-			rc = socket_reconnect(serv_addr, cout);
+			rc = socket_reconnect(&serv_addr, cout);
+			cout++;
 		}		
 		
 		if(rc < 0)
 			return -3;
 	}
 
+	/* Initialize local database */
+	temporary_repo(&db);
 	while(1)
 	{
 		get_time(time, sizeof(time));
 	
-		if(read_temperature(temp) < 0)
+		if(read_temperature(&temp) < 0)
 		{
 			log_error("读取温度失败: %s", strerror(errno));
 			return -5;
 		}
-		log_debug("当前时间: %s, 温度: %,2f", time, *temp);
+		log_debug("当前时间: %s, 温度: %.2f", time, temp);
 	
-		if(date_packet(time, temp, buf, sizeof(buf)) < 0)
+		if(date_packet(time, &temp, buf, sizeof(buf)) < 0)
 		{
-			log_error("数据打包失败(%s, 温度: %.2f)", time, *temp);
+			log_error("数据打包失败(%s, 温度: %.2f)", time, temp);
 			return -6;
 		}
 		log_trace("数据完成打包: %s", buf);
@@ -165,9 +169,9 @@ int main(int argc, char *argv[])
 		if(rc < 0)
 		{
 				close(fd1);
-				temporary_repo(db);
+				temporary_repo(&db);
 				log_warn("连接意外关闭，尝试重连(第%d次)", cout);
-				if((fd1 = socket_reconnect(serv_addr, cout)) < 0)
+				if((fd1 = socket_reconnect(&serv_addr, cout)) < 0)
 				{
 					log_info("数据存入本地临时库(第%d批)", cout);	
 					temp_data_in(db,buf);
@@ -187,6 +191,7 @@ int main(int argc, char *argv[])
 				if(stmt == NULL)
 				{
 					sqlite3_close(db);
+					continue;
 					
 				}
 

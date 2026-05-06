@@ -27,7 +27,7 @@ extern sqlite3_stmt* data_exist(sqlite3 *db);
 
 extern int table_exist(sqlite3 *db);
 
-extern void temporary_repo(sqlite3 *db);
+extern int temporary_repo(sqlite3 **db);
 
 extern void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size);
 

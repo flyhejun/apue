@@ -43,7 +43,7 @@ int socket_init()
 int domain_handle(char *domain_name, int port, char *serv_ip)
 {
 	int						rs;
-	char					ip_buf[8];
+	char					ip_buf[INET_ADDRSTRLEN];
 	char					port_buf[8];
 	struct addrinfo			hints;
 	struct addrinfo			*result;		
@@ -77,14 +77,14 @@ int domain_handle(char *domain_name, int port, char *serv_ip)
 	return 1;
 }
 
-int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in serv_addr)
+int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in *serv_addr)
 {
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(port);
-	inet_aton(serv_ip, &serv_addr.sin_addr);
+	memset(serv_addr, 0, sizeof(struct sockaddr_in));
+	serv_addr->sin_family = AF_INET;
+	serv_addr->sin_port = htons(port);
+	inet_aton(serv_ip, &serv_addr->sin_addr);
 
-	if(connect(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	if(connect(fd, (struct sockaddr *)serv_addr, sizeof(struct sockaddr_in)) < 0)
 	{
 		log_error("与服务器端 %s:%d 连接失败: %s", serv_ip, port, strerror(errno));
 		return -1;
@@ -94,14 +94,14 @@ int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in serv_addr
 	return 0;
 }
 
-int socket_bind(int fd, int port, struct sockaddr_in serv_addr)
+int socket_bind(int fd, int port, struct sockaddr_in *serv_addr)
 {
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(port);
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	memset(serv_addr, 0, sizeof(struct sockaddr_in));
+	serv_addr->sin_family = AF_INET;
+	serv_addr->sin_port = htons(port);
+	serv_addr->sin_addr.s_addr = htonl(INADDR_ANY);
 
-	if(bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	if(bind(fd, (struct sockaddr *)serv_addr, sizeof(struct sockaddr_in)) < 0)
 	{
 		log_error("绑定到端口: %d 失败，错误分析: %s", port, strerror(errno));
 		return -1;
@@ -183,13 +183,13 @@ int socket_epoll(int epfd, int fd, struct epoll_event *events, size_t events_siz
 	}
 	return j;
 }
-int socket_reconnect(struct sockaddr_in serv_addr, int cout)
+int socket_reconnect(struct sockaddr_in *serv_addr, int cout)
 {
 	int 		cli_fd;
 
 	cli_fd = socket_init();
 
-	if(connect(cli_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	if(connect(cli_fd, (struct sockaddr *)serv_addr, sizeof(struct sockaddr_in)) < 0)
 	{
 		log_error("重连失败: %s", strerror(errno));
 		cout++;

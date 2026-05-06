@@ -24,9 +24,9 @@ extern int socket_init();
 
 extern int domain_handle(char *domain_name, int port, char *serv_ip);
 
-extern int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in serv_addr);
+extern int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in *serv_addr);
 
-extern int socket_reconnect(struct sockaddr_in serv_addr, int cout);
+extern int socket_reconnect(struct sockaddr_in *serv_addr, int cout);
 
 #ifdef __cplusplus
 }

@@ -79,33 +79,34 @@ sqlite3_stmt* data_exist(sqlite3 *db)
 }
 
 
-void temporary_repo(sqlite3 *db)
+int temporary_repo(sqlite3 **db)
 {
 	char			*zErrMsg = NULL;
 	char 			*sql = NULL;
 
-	int	rc = sqlite3_open("temp.db", &db);
+	int rc = sqlite3_open("temp.db", db);
 	if(rc)
 	{
-		printf("Create or open database failure: %s\n", sqlite3_errmsg(db));
-		_exit(1);
+		printf("Create or open database failure: %s\n", sqlite3_errmsg(*db));
+		return -1;
 	}
 
-	if(table_exist(db) != 1)
+	if(table_exist(*db) != 1)
 	{
 		sql = "CREATE TABLE TEMP_RECDS(" \
 			   "ID				TEXT	NOT NULL," \
 			   "TIME			TEXT	NOT NULL," \
 			   "TEMPERATURE		REAL	NOT NULL);";
 	
-		rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+		rc = sqlite3_exec(*db, sql, callback, 0, &zErrMsg);
 		if(rc != SQLITE_OK)
 		{
 			log_error("SQL操作失败: %s", zErrMsg);
 			sqlite3_free(zErrMsg);
-			_exit(1);
+			return -1;
 		}
 	}
+	return 0;
 }
 
 int temp_data_in(sqlite3 *db, char *json_buf)
@@ -113,11 +114,11 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	char			*sql = NULL;
 	sqlite3_stmt	*stmt;
 	cJSON			*root = NULL;
-	char			*id_item = NULL;
-	char			*time_item = NULL;
-	double			*temp_item = NULL;
+	char			id_item[64] = {0};
+	char			time_item[64] = {0};
+	double			temp_item = 0.0;
 	
-	temporary_repo(db);
+	temporary_repo(&db);
 	sql = "INSERT INTO TEMP_RECDS (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
 	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 	if(rc != SQLITE_OK)
@@ -144,15 +145,15 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 		return -2;
 	}
 
-	strcpy(id_item, id_str->valuestring);
-	strcpy(time_item, time_str->valuestring);
-	*temp_item = (double)temp_num->valuedouble;
+	strncpy(id_item, id_str->valuestring, sizeof(id_item) - 1);
+	strncpy(time_item, time_str->valuestring, sizeof(time_item) - 1);
+	temp_item = temp_num->valuedouble;
 
 	cJSON_Delete(root);
 
 	sqlite3_bind_text(stmt, 1, id_item, -1, SQLITE_STATIC);
 	sqlite3_bind_text(stmt, 2, time_item, -1, SQLITE_STATIC);
-	sqlite3_bind_double(stmt, 3, *temp_item);
+	sqlite3_bind_double(stmt, 3, temp_item);
 
 	rc = sqlite3_step(stmt);
 	if(rc != SQLITE_OK)
@@ -182,7 +183,7 @@ void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size)
 	buf_id = strdup((const char*)id_buf);
 	buf_time = strdup((const char*)time_buf);
 	date_packet(buf_time, &temp_buf, buf, buf_size);
-	log_trace("缓存记录上传: ID:%S, 时间: %s, 温度: .2f", 
+	log_trace("缓存记录上传: ID:%s, 时间: %s, 温度: %.2f", 
 							id_buf, time_buf, temp_buf);
 							
 	free(buf_id);

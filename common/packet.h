@@ -17,13 +17,13 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#ifdef _Cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
 int date_packet(char *time, double *temperature, char *buf, size_t buf_len);
 
-#ifdef _Cplusplus
+#ifdef __cplusplus
 
 }
 #endif

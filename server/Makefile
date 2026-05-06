@@ -1,4 +1,4 @@
-C := gcc
+CC := gcc
 CFLAGS := -Wall -g -I/home/iot26/hejunfei/common
 LIBS := -lsqlite3 -lm
 

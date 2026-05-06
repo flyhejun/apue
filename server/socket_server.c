@@ -36,7 +36,7 @@
 #define MAX_EVENTS		1024
 #define	BACKLOG			13			/*MAX LISTEN FDS  */
 
-int 	g_stop = 0;
+volatile sig_atomic_t g_stop = 0;
 
 void sig_handler(int signum)
 {
@@ -50,10 +50,11 @@ void sig_handler(int signum)
 			write(STDERR_FILENO, "SIGSEGV signal detected\n", 24);
 			_exit(1);
 			break;
-			 
+
 		case SIGPIPE:
 			write(STDERR_FILENO, "SIGPIPE signal detected(socket error)\n", 38);
 			break;
+
 		case SIGINT:
 			write(STDERR_FILENO, "SIGINT signal detected(Ctrl0+c)\n", 33);
 			break;
@@ -136,7 +137,7 @@ int main (int argc, char **argv)
 
 	setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
-	if(socket_bind(listen_fd, port, serv_addr) < 0)
+	if(socket_bind(listen_fd, port, &serv_addr) < 0)
 	{
 		return -2;
 	}
@@ -144,7 +145,7 @@ int main (int argc, char **argv)
 
 	listen(listen_fd, BACKLOG);
 
-	temporary_repo(db);
+	temporary_repo(&db);
 	log_info("数据库和数据表连接成功");
 	
 	if((epfd =socket_epoll_init(listen_fd)) < 0)

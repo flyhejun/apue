@@ -41,7 +41,7 @@ int date_packet(char *time, double *temperature, char *buf, size_t buf_len)
 	}
 
 	memset(buf, 0, buf_len);
-	strcpy(buf, json_str);
+	strncpy(buf, json_str, buf_len - 1);
 	
 	free(json_str);
 	cJSON_Delete(root);

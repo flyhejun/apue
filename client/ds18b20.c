@@ -105,7 +105,7 @@ int 	read_temperature(double *temperature)
 	ret = read_data(sn, buf, sizeof(buf));
 	if(ret < 0)
 	{
-		return ret-10;
+		return -3;
 	}
 
 	ptr = strstr(buf, "t=");
