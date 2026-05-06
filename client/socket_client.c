@@ -83,7 +83,6 @@ int main(int argc, char *argv[])
 	int						cout = 0;
 	sqlite3_stmt			*stmt;
 	sqlite3 				*db = NULL;
-	char					*sql = NULL;
 	int						updata_count = 0;
 
 	while ((ch = getopt_long(argc, argv, "i:p:h:s:d", opts, NULL)) != -1)
@@ -180,17 +179,18 @@ int main(int argc, char *argv[])
 					cout = 0;
 				}
 		}
+
 		else
 		{
 				log_info("发送%d个字节数据成功", rc);
-				sql = "SELECT id, time, temperature FROM temp_recds";
-				rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-				if(rs != SQLITE_OK)
+				stmt = data_exist(db);
+				if(stmt == NULL)
 				{
-					log_error("SQL准备失败: %s", sqlite3_errmsg(db));
 					sqlite3_close(db);
+					
 				}
 
+				rs = SQLITE_OK;
 				log_debug("SQL准备就绪，开始遍历上传");
 				while((rs = sqlite3_step(stmt)) == SQLITE_ROW && updata_count < 10)
 				{
@@ -201,7 +201,17 @@ int main(int argc, char *argv[])
 						log_info("data reupdata.");
 						old_data_delete(db, "temp_recds");
 						updata_count++;
+
+						sqlite3_finalize(stmt);
+						stmt = data_exist(db);  // 重新准备
+						if(stmt == NULL)
+						{
+							log_error("重新准备SQL失败");
+							break;
+						}
+						continue;
 					}
+
 					else if(rc <= 0)
 					{
 						log_error("失去连接，错误: %s", strerror(errno));
