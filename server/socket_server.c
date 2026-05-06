@@ -139,6 +139,7 @@ int main (int argc, char **argv)
 
 	if(socket_bind(listen_fd, port, &serv_addr) < 0)
 	{
+		close(listen_fd);
 		return -2;
 	}
 	printf("socket[%d] bind on port[%d] successfully!\n", listen_fd, port);
@@ -148,8 +149,10 @@ int main (int argc, char **argv)
 	temporary_repo(&db);
 	log_info("数据库和数据表连接成功");
 	
-	if((epfd =socket_epoll_init(listen_fd)) < 0)
+	if((epfd = socket_epoll_init(listen_fd)) < 0)
 	{
+		close(listen_fd);
+		sqlite3_close(db);
 		return -3;
 	}
 
@@ -166,6 +169,7 @@ int main (int argc, char **argv)
 				log_error("socket[%d] 断开连接", ep_fds[i]);
 				epoll_ctl(epfd, EPOLL_CTL_DEL, ep_fds[i], NULL);
 				close(ep_fds[i]);
+				continue;
 			}                    
 			if(temp_data_in(db, buf) == 0)
 			{                    
@@ -175,6 +179,7 @@ int main (int argc, char **argv)
 	}
 
 
+	close(epfd);
 	sqlite3_close(db);
 	close(listen_fd);
 	return 0;

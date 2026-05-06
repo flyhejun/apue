@@ -128,7 +128,6 @@ int main(int argc, char *argv[])
 	fd1 = socket_init();
 	while(fd1 < 0)
 	{
-		close(fd1);
 		fd1 = socket_init();
 	}
 
@@ -143,6 +142,8 @@ int main(int argc, char *argv[])
 		
 		if(rc < 0)
 			return -3;
+		close(fd1);
+		fd1 = rc;
 	}
 
 	/* Initialize local database */
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
 		rc = write(fd1, buf, strlen(buf));
 		if(rc < 0)
 		{
-				close(fd1);
+				if(fd1 >= 0) close(fd1);
 				temporary_repo(&db);
 				log_warn("连接意外关闭，尝试重连(第%d次)", cout);
 				if((fd1 = socket_reconnect(&serv_addr, cout)) < 0)
@@ -223,6 +224,7 @@ int main(int argc, char *argv[])
 						break;
 					}	
 				}
+				sqlite3_finalize(stmt);
 				updata_count = 0;
 		}
 

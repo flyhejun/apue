@@ -70,6 +70,7 @@ int domain_handle(char *domain_name, int port, char *serv_ip)
 		domain_ip = (struct sockaddr_in *)result->ai_addr;
 		inet_ntop(AF_INET, &(domain_ip->sin_addr), ip_buf, sizeof(ip_buf));
 		strcpy(serv_ip, ip_buf);
+	freeaddrinfo(result);
 	}
 
 	return 1;

@@ -118,7 +118,6 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	char			time_item[64] = {0};
 	double			temp_item = 0.0;
 	
-	temporary_repo(&db);
 	sql = "INSERT INTO TEMP_RECDS (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
 	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 	if(rc != SQLITE_OK)
@@ -131,6 +130,7 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	if(root == NULL)
 	{
 		printf("json parse fail");
+		sqlite3_finalize(stmt);
 		return -1;
 	}
 
@@ -141,6 +141,7 @@ int temp_data_in(sqlite3 *db, char *json_buf)
 	if(!cJSON_IsString(id_str)||!cJSON_IsString(time_str)||!cJSON_IsNumber(temp_num))
 	{
 		printf("change format fail\n");
+		sqlite3_finalize(stmt);
 		cJSON_Delete(root);
 		return -2;
 	}
