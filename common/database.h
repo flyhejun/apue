@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <sqlite3.h>
 extern int callback(void *NotUsed,int argc, char *argv[], char **azColName);
 
 extern int temp_data_in(sqlite3 *db, char *json_buf);

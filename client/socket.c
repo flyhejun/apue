@@ -48,7 +48,6 @@ int socket_connect(socket_t *sock)
     struct in_addr      inaddr;
     struct addrinfo     *result, hints;
     struct addrinfo     *p;
-    int                 addr_len = sizeof(addr);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -60,7 +59,7 @@ int socket_connect(socket_t *sock)
     }
 
     snprintf(port_buf, sizeof(port_buf), "%d", sock->port);
-    if((rs = getaddrinfo(domain_name, port_buf, &hints, &result)))
+    if((rs = getaddrinfo(sock->serv_host, port_buf, &hints, &result)))
     {
         log_error("getaddrinfo() parser [%s:%s] failed: %s\n", sock->serv_host, port_buf, gai_strerror(rs));
         return -1;
@@ -76,7 +75,7 @@ int socket_connect(socket_t *sock)
             continue;
         }
 
-        rs = connect(sockfd, p->ai_addr, addr_len);
+        rs = connect(sockfd, p->ai_addr, p->ai_addrlen);
         if(0 == rs)
         {
             sock->fd = sockfd;

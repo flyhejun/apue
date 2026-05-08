@@ -11,8 +11,8 @@
  *                 
  ********************************************************************************/
 
-#ifndef SOCKET_CLI_H
-#define SOCKET_CLI_H
+#ifndef SOCKET_SOCK_H
+#define SOCKET_SOCK_H
 
 #ifdef __cplusplus
 extern "C" {

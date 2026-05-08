@@ -35,7 +35,7 @@ int date_packet(data_t *data, char *buf, size_t buf_len)
 		return -1;
 	}
 
-	cJSON_AddStringiToObject(root, "ID", data->id);
+	cJSON_AddStringToObject(root, "ID", data->id);
 	cJSON_AddStringToObject(root, "TIME", data->time);
 	cJSON_AddNumberToObject(root, "TEMPERATURE", data->temperature);
 	

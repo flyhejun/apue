@@ -158,7 +158,7 @@ int main (int argc, char **argv)
 
 	while(!g_stop)
 	{
-		j = socket_epoll(epfd, listen_fd, events, sizeof(events), ep_fds);
+		j = socket_epoll(epfd, listen_fd, events, MAX_EVENTS, ep_fds);
 
 		for(i=0; i<j; i++)
 		{

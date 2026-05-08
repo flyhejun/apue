@@ -3,12 +3,12 @@
  *                  All rights reserved.
  *
  *       Filename:  socket_client.c
- *    Description:  This file 
- *                 
+ *    Description:  This file
+ *
  *        Version:  1.0.0(16/03/26)
  *         Author:  He Junfei <hejunfei2005@163.com>
  *      ChangeLog:  1, Release initial version on "16/03/26 14:27:17"
- *                 
+ *
  ********************************************************************************/
 
 #include <stdio.h>
@@ -32,16 +32,16 @@
 #include "cJSON.h"
 #include "log.h"
 #include "socket.h"
-				
+
 static void print_usage(char *program)
 {
 	printf("%s usage: \n", program);
-	printf("  -i(--ipaddr): sepcify server port.\n");
-	printf("  -p(--port): sepcify server port.\n");
-	printf("  -s(--sleep: sleep time setting\n");
-	printf("  -d(--dnr): donmain name resolution.\n");
-	printf("  -h(--Help): print this help information.\n");
-	printf("if already have dnr, ipaddr isnot necessary\n");
+	printf("  -i(--ipaddr): specify server ip address.\n");
+	printf("  -p(--port): specify server port.\n");
+	printf("  -s(--sleeptime): sleep time setting\n");
+	printf("  -d(--dnr): domain name resolution.\n");
+	printf("  -h(--help): print this help information.\n");
+	printf("if already have dnr, ipaddr is not necessary\n");
 }
 
 void get_time(char *time_str, size_t time_len)
@@ -73,15 +73,13 @@ int main(int argc, char *argv[])
     socket_t                sock;
 	char                    host[64];
     int						port = 0;
-	struct sockaddr_in 		serv_addr;
-	char 					buf[512];	
-	
+	char 					buf[512];
+
     data_t                  data;
     /*time var*/
-	char					time[64];
- 	
+	char					time_str[64];
+
     /*temp var*/
-	double					temp = 0.0;
 	int						sleep_t = 5;
 	int						ch;
 
@@ -95,19 +93,18 @@ int main(int argc, char *argv[])
 	};
 
     int                     sample_flag = 0;
-	int 					rc = 0;	
-	int						rs = 0;
-	int						cout = 0;
-	sqlite3_stmt			*stmt;
-	sqlite3 				*db = NULL;
+	int 					rc = 0;
 	int						updata_count = 0;
+	sqlite3 				*db = NULL;
 
-	while ((ch = getopt_long(argc, argv, "i:p:h:s:d", opts, NULL)) != -1)
+	memset(host, 0, sizeof(host));
+
+	while ((ch = getopt_long(argc, argv, "i:p:hs:d:", opts, NULL)) != -1)
 	{
 		switch(ch)
 		{
 			case 'i':
-				host = optarg;
+				strncpy(host, optarg, sizeof(host) - 1);
 				break;
 
 			case 'p':
@@ -119,16 +116,20 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'd':
-				host = optarg;
+				strncpy(host, optarg, sizeof(host) - 1);
 				break;
 
 			case 'h':
 				print_usage(argv[0]);
-				break;
+				return 0;
+
+			default:
+				print_usage(argv[0]);
+				return -1;
 		}
 	}
 
-	if( !servip || !port)
+	if( !host[0] || !port)
 	{
 		print_usage(argv[0]);
 		return -1;
@@ -139,25 +140,26 @@ int main(int argc, char *argv[])
 	/* Initialize local database */
 	if(temporary_repo(&db) < 0)
     {
-        continue;
+        log_error("初始化本地数据库失败");
+        return -1;
     }
-    
+
     while(1)
 	{
 
         if( wait_until(sleep_t))
-        {     
-            get_devid(&data, 001);  
-		    get_time(&(data.time), sizeof(data.time));
+        {
+            get_devid(&data, 1);
+		    get_time(data.time, sizeof(data.time));
 		    if(read_temperature(&(data.temperature)) < 0)
 		    {
 		    	log_error("读取温度失败: %s", strerror(errno));
 			    continue;
 		    }
-	
+
 		    if(date_packet(&data, buf, sizeof(buf)) < 0)
 		    {
-		    	log_error("数据打包失败(%s, 温度: %.2f)", time, temp);
+		    	log_error("数据打包失败(%s, 温度: %.2f)", data.time, data.temperature);
 		    	continue;
 		    }
             sample_flag = 1;
@@ -177,27 +179,28 @@ int main(int argc, char *argv[])
                 continue;
             }
         }
-        
+
         if(sample_flag == 1)
         {
-		    rc = write(fd1, buf, strlen(buf));
+		    rc = write(sock.fd, buf, strlen(buf));
 	    	if(rc < 0)
 		    {
-		    	log_info("数据存入本地临时库");	  
-                temp_data_in(db,buf);
+		    	log_info("数据存入本地临时库");
+                temp_data_in(db, buf);
                 sample_flag = 0;
                 continue;
-		    }   
+		    }
 
 		    else
 		    {
-	    		log_info("发送%d个字节数据成功", rc);  
-                tempo_updata(db, buf, sizeof(buf), sock->fd);
+	    		log_info("发送%d个字节数据成功", rc);
+                tempo_updata(db, buf, sizeof(buf), sock.fd);
 	    	}
-
+            sample_flag = 0;
     	}
-	
-    	close(fd1);
+	}
 
-    	return 0;
+	close(sock.fd);
+	sqlite3_close(db);
+	return 0;
 }
