@@ -24,93 +24,101 @@
 #include <unistd.h>
 #include "log.h"
 
-int socket_init()
+int socket_init(socket_t *sock, char *host, int port)
 {
-	int		fd;
+    if( !sock || port <= 0 )
+        return -1;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if(fd < 0)
-	{
-		log_error("创建socket失败: %s", strerror(errno));
-		return -1;
-	}
+    memset(sock, 0, sizeof(*sock));
+    sock->fd = -1;
+    sock->port = port;
+    if(host)
+    {
+        strncpy(sock->serv_host, host, 64);
+    }
 
-	return fd;
-}
-
-int domain_handle(char *domain_name, int port, char *serv_ip)
-{
-	int						rs;
-	char					ip_buf[INET_ADDRSTRLEN];
-	char					port_buf[8];
-	struct addrinfo			hints;
-	struct addrinfo			*result;		
-	struct sockaddr_in		*domain_ip;
-
-	if(strcmp(domain_name, "www.123.com") == 0)
-	{
-		return 0; 
-	}
-	
-	else 
-	{
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_INET;
-		hints.ai_socktype = SOCK_STREAM;
-		
-		memset(port_buf, 0, sizeof(port_buf));
-		snprintf(port_buf, sizeof(port_buf), "%d", port);
-		
-		if((rs = getaddrinfo(domain_name, port_buf, &hints, &result)) != 0)
-		{
-			log_error("域名解析失败: %s:%s, 错误解析: %s", domain_name, port_buf, gai_strerror(rs));
-			return -1;
-		}
-		
-		domain_ip = (struct sockaddr_in *)result->ai_addr;
-		inet_ntop(AF_INET, &(domain_ip->sin_addr), ip_buf, sizeof(ip_buf));
-		strcpy(serv_ip, ip_buf);
-	freeaddrinfo(result);
-	}
-
-	return 1;
-}
-
-int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in *serv_addr)
-{
-	memset(serv_addr, 0, sizeof(struct sockaddr_in));
-	serv_addr->sin_family = AF_INET;
-	serv_addr->sin_port = htons(port);
-	inet_aton(serv_ip, &serv_addr->sin_addr);
-
-	if(connect(fd, (struct sockaddr *)serv_addr, sizeof(struct sockaddr_in)) < 0)
-	{
-		log_error("与服务器端 %s:%d 连接失败: %s", serv_ip, port, strerror(errno));
-		return -1;
-	}
-
-	log_info("成功链接服务器 %s:%d", serv_ip, port);
 	return 0;
 }
 
-int socket_reconnect(struct sockaddr_in *serv_addr, int cout)
+int socket_connect(socket_t *sock)
 {
-	int 		cli_fd;
+    int                 rs = -1;
+    int                 sockfd = 0;
+    char                port_buf[20];
+    struct in_addr      inaddr;
+    struct addrinfo     *result, hints;
+    struct addrinfo     *p;
+    int                 addr_len = sizeof(addr);
 
-	cli_fd = socket_init();
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+        
+    if(inet_aton(sock->serv_host, &inaddr))
+    {
+        hints.ai_flags |= AI_NUMERICHOST;
+    }
 
-	if(connect(cli_fd, (struct sockaddr *)serv_addr, sizeof(struct sockaddr_in)) < 0)
-	{
-		log_error("重连失败: %s", strerror(errno));
-		cout++;
-		close(cli_fd);
-		return -1;
-	}
-	
-	else
-	{
-		log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
-	}
+    snprintf(port_buf, sizeof(port_buf), "%d", sock->port);
+    if((rs = getaddrinfo(domain_name, port_buf, &hints, &result)))
+    {
+        log_error("getaddrinfo() parser [%s:%s] failed: %s\n", sock->serv_host, port_buf, gai_strerror(rs));
+        return -1;
+    }
 
-	return cli_fd;
+    for(p=result; p!=NULL; p=p->ai_next)
+    {
+        sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if(sockfd < 0)
+        {
+            log_error("socket() create failed: %s\n", strerror(errno));
+            rs = -1;
+            continue;
+        }
+
+        rs = connect(sockfd, p->ai_addr, addr_len);
+        if(0 == rs)
+        {
+            sock->fd = sockfd;
+            log_info("Connect to server[%s:%d] on fd[%d] successfully!\n", sock->serv_host, sock->port, sockfd);
+            break;
+        }
+
+        else
+        {
+            close(sockfd);
+            continue;
+        }
+    }
+    
+    freeaddrinfo(result);
+    return rs;
 }
+
+int if_connected(socket_t *sock)
+{
+    struct tcp_info     info;
+    int                 len = sizeof(info);
+    
+    if(!sock)
+    {
+        return -1;
+    }
+
+    if( sock->fd < 0)
+    {
+        return -1;
+    }
+
+    getsockopt(sock->fd, IPPROTO_TCP, TCP_INFO, &info, (socklen_t *)&len);
+    if( TCP_ESTABLISHED==info.tcpi_state )
+    {
+        return 0;
+    }
+
+    else
+    {
+        return -1;
+    }
+}
+

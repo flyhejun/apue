@@ -63,132 +63,112 @@ int table_exist(sqlite3 *db)
 
 sqlite3_stmt* data_exist(sqlite3 *db)
 {
-	char			*sql = "SELECT id, time, temperature FROM temp_recds";
-	int				rs;
-	sqlite3_stmt	*stmt;
+    char            *sql = "SELECT DATA FROM TEMP_RECDS";
+    int             rs;
+    sqlite3_stmt    *stmt;
 
-	rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    rs = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
-	if(rs != SQLITE_OK)
-	{
-		log_error("SQL准备失败: %s", sqlite3_errmsg(db));
-		return NULL;
-	}
+    if(rs != SQLITE_OK)
+    {
+        log_error("SQL准备失败: %s", sqlite3_errmsg(db));
+        return NULL;
+    }
 
-	return stmt;
+    if(stmt == NULL)
+    {
+        sqlite3_close(db);
+        return NULL;
+    }
+
+    return stmt;
 }
-
 
 int temporary_repo(sqlite3 **db)
 {
-	char			*zErrMsg = NULL;
-	char 			*sql = NULL;
+    char            *zErrMsg = NULL;
+    char            *sql = NULL;
 
-	int rc = sqlite3_open("temp.db", db);
-	if(rc)
-	{
-		printf("Create or open database failure: %s\n", sqlite3_errmsg(*db));
-		return -1;
-	}
+    int rc = sqlite3_open("temp.db", db);
+    if(rc)
+    {
+        printf("Create or open database failure: %s\n", sqlite3_errmsg(*db));
+        return -1;
+    }
 
-	if(table_exist(*db) != 1)
-	{
-		sql = "CREATE TABLE TEMP_RECDS(" \
-			   "ID				TEXT	NOT NULL," \
-			   "TIME			TEXT	NOT NULL," \
-			   "TEMPERATURE		REAL	NOT NULL);";
-	
-		rc = sqlite3_exec(*db, sql, callback, 0, &zErrMsg);
-		if(rc != SQLITE_OK)
-		{
-			log_error("SQL操作失败: %s", zErrMsg);
-			sqlite3_free(zErrMsg);
-			return -1;
-		}
-	}
-	return 0;
+    if(table_exist(*db) != 1)
+    {
+        sql = "CREATE TABLE TEMP_RECDS(DATA TEXT NOT NULL);";
+
+        rc = sqlite3_exec(*db, sql, callback, 0, &zErrMsg);
+        if(rc != SQLITE_OK)
+        {
+            log_error("SQL操作失败: %s", zErrMsg);
+            sqlite3_free(zErrMsg);
+            return -1;
+        }
+    }
+    return 0;
 }
 
 int temp_data_in(sqlite3 *db, char *json_buf)
 {
-	char			*sql = NULL;
-	sqlite3_stmt	*stmt;
-	cJSON			*root = NULL;
-	char			id_item[64] = {0};
-	char			time_item[64] = {0};
-	double			temp_item = 0.0;
-	
-	sql = "INSERT INTO TEMP_RECDS (ID, TIME, TEMPERATURE) VALUES(?, ?, ?);";
-	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-	if(rc != SQLITE_OK)
-	{
-		printf("prepare failure: %s\n", sqlite3_errmsg(db));
-		return rc;
-	}
-	
-	root = cJSON_Parse(json_buf);
-	if(root == NULL)
-	{
-		printf("json parse fail");
-		sqlite3_finalize(stmt);
-		return -1;
-	}
+    char         *sql = NULL;
+    sqlite3_stmt *stmt;
 
-	cJSON *id_str = cJSON_GetObjectItem(root, "ID");
-	cJSON *time_str = cJSON_GetObjectItem(root, "TIME");
-	cJSON *temp_num = cJSON_GetObjectItem(root, "TEMPERATURE");
+    sql = "INSERT INTO TEMP_RECDS (DATA) VALUES(?);";
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if(rc != SQLITE_OK)
+    {
+        printf("prepare failure: %s\n", sqlite3_errmsg(db));
+        return rc;
+    }
 
-	if(!cJSON_IsString(id_str)||!cJSON_IsString(time_str)||!cJSON_IsNumber(temp_num))
-	{
-		printf("change format fail\n");
-		sqlite3_finalize(stmt);
-		cJSON_Delete(root);
-		return -2;
-	}
+    sqlite3_bind_text(stmt, 1, json_buf, -1, SQLITE_STATIC);
 
-	strncpy(id_item, id_str->valuestring, sizeof(id_item) - 1);
-	strncpy(time_item, time_str->valuestring, sizeof(time_item) - 1);
-	temp_item = temp_num->valuedouble;
+    rc = sqlite3_step(stmt);
+    if(rc != SQLITE_OK)
+    {
+        printf("step to table failure: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return -3;
+    }
 
-	cJSON_Delete(root);
-
-	sqlite3_bind_text(stmt, 1, id_item, -1, SQLITE_STATIC);
-	sqlite3_bind_text(stmt, 2, time_item, -1, SQLITE_STATIC);
-	sqlite3_bind_double(stmt, 3, temp_item);
-
-	rc = sqlite3_step(stmt);
-	if(rc != SQLITE_OK)
-	{
-		printf("step to table failure: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return -3;
-	}
-
-	sqlite3_finalize(stmt);
-	return 0;
+    sqlite3_finalize(stmt);
+    return 0;
 }
 
-void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size)
+void tempo_updata(sqlite3 *db, char *buf, size_t buf_size, int fd)
 {
-	const unsigned char 		*id_buf = NULL;
-	const unsigned char			*time_buf = NULL;
-	double 						temp_buf = 0;
+    sqlite3_stmt        *stmt;
+    const unsigned char *data = NULL;
 
-	char						*buf_id = NULL;
-	char						*buf_time = NULL;
+    stmt = data_exist(db);
+    if(!stmt) return;
 
-	memset(buf, 0, buf_size);
-	id_buf = sqlite3_column_text(stmt, 0);
-	time_buf = sqlite3_column_text(stmt, 1);
-	temp_buf = sqlite3_column_double(stmt, 2);
-	buf_id = strdup((const char*)id_buf);
-	buf_time = strdup((const char*)time_buf);
-	date_packet(buf_time, &temp_buf, buf, buf_size);
-	log_trace("缓存记录上传: ID:%s, 时间: %s, 温度: %.2f", 
-							id_buf, time_buf, temp_buf);
-							
-	free(buf_id);
-	free(buf_time);
+    if(sqlite3_step(stmt) != SQLITE_ROW)
+    {
+        sqlite3_finalize(stmt);
+        log_error("库内无数据");
+        return ;
+    }
+
+    memset(buf, 0, buf_size);
+    data = sqlite3_column_text(stmt, 0);
+    if(data)
+    {
+        strncpy(buf, (const char*)data, buf_size - 1);
+    }
+
+    sqlite3_finalize(stmt);
+
+    if(write(fd, buf, strlen(buf)) < 0)
+    {
+        log_error("失去连接，错误: %s", strerror(errno));
+        return ;          
+    }
+    log_info("data reupdata.");
+    return ;
 }
 
 int old_data_delete(sqlite3 *db, const char *table_name)

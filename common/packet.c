@@ -16,9 +16,16 @@
 #include "packet.h"
 #include "cJSON.h"
 
-int date_packet(char *time, double *temperature, char *buf, size_t buf_len)
+void get_devid(data_t *data, int sn)
 {
-	char			*id = "rpi3b001";
+    int             id_size = sizeof(data->id);
+
+    memset(data->id, 0, id_size);
+    snprintf(data->id, id_size, "RPI#%04d", sn);
+}
+
+int date_packet(data_t *data, char *buf, size_t buf_len)
+{
 	char			*json_str = NULL;
 
 	cJSON *root = cJSON_CreateObject();
@@ -28,9 +35,9 @@ int date_packet(char *time, double *temperature, char *buf, size_t buf_len)
 		return -1;
 	}
 
-	cJSON_AddStringToObject(root, "ID", id);
-	cJSON_AddStringToObject(root, "TIME", time);
-	cJSON_AddNumberToObject(root, "TEMPERATURE", *temperature);
+	cJSON_AddStringiToObject(root, "ID", data->id);
+	cJSON_AddStringToObject(root, "TIME", data->time);
+	cJSON_AddNumberToObject(root, "TEMPERATURE", data->temperature);
 	
 	json_str = cJSON_Print(root);
 	if(!json_str)

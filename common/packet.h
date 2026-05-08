@@ -21,6 +21,15 @@
 extern "C" {
 #endif
 
+typedef struct data_s
+{
+    char        time[64];
+    double      temperature;
+    char        id[16];
+} data_t;
+
+void get_devid(data_t *data, int sn);
+
 int date_packet(char *time, double *temperature, char *buf, size_t buf_len);
 
 #ifdef __cplusplus

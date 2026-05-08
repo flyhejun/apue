@@ -10,6 +10,7 @@
  *      ChangeLog:  1, Release initial version on "16/03/26 14:27:17"
  *                 
  ********************************************************************************/
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@
 #include <time.h>
 #include <getopt.h>
 #include <sqlite3.h>
+
 #include "socket_client.h"
 #include "ds18b20.h"
 #include "packet.h"
@@ -52,23 +54,38 @@ void get_time(char *time_str, size_t time_len)
 	strftime(time_str, time_len, "%Y-%m-%d %H:%M:%S", lt);
 }
 
+int wait_until(long sleep_time)
+{
+    static time_t   last = 0;
+    time_t          now = time(NULL);
+
+    if(last == 0 || difftime(now, last) >= sleep_time)
+    {
+        last = now;
+        return 1;
+    }
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
 	/*socket var*/
-	char					*servip = NULL;
-	char					*dns = "www.123.com";
-	int						port = 0;
-	int						fd1 = -1;
+    socket_t                sock;
+	char                    host[64];
+    int						port = 0;
 	struct sockaddr_in 		serv_addr;
 	char 					buf[512];	
-	/*time var*/
+	
+    data_t                  data;
+    /*time var*/
 	char					time[64];
- 	/*temp var*/
+ 	
+    /*temp var*/
 	double					temp = 0.0;
 	int						sleep_t = 5;
 	int						ch;
-	struct option opts[] = {
+
+    struct option opts[] = {
 		{"ipaddr", required_argument, NULL, 'i'},
 		{"port", required_argument, NULL, 'p'},
 		{"help", no_argument, NULL, 'h'},
@@ -77,8 +94,8 @@ int main(int argc, char *argv[])
 		{NULL, 0, NULL, 0}
 	};
 
-	int 					rc = 0;
-	
+    int                     sample_flag = 0;
+	int 					rc = 0;	
 	int						rs = 0;
 	int						cout = 0;
 	sqlite3_stmt			*stmt;
@@ -90,7 +107,7 @@ int main(int argc, char *argv[])
 		switch(ch)
 		{
 			case 'i':
-				servip = optarg;
+				host = optarg;
 				break;
 
 			case 'p':
@@ -102,7 +119,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'd':
-				dns = optarg;
+				host = optarg;
 				break;
 
 			case 'h':
@@ -111,127 +128,76 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	log_info("配置情况： IP:%s, Port:%d, 休眠时间:%d秒, 域名：%s",
-			 servip ? servip : "(null)", port, sleep_t, strcmp(dns, "www.123.com") ? dns : "(未使用)");
-
 	if( !servip || !port)
 	{
 		print_usage(argv[0]);
 		return -1;
 	}
 
-	if(domain_handle(dns, port, servip) < 0)
-	{
-		return -2;	
-	}
-
-	fd1 = socket_init();
-	while(fd1 < 0)
-	{
-		fd1 = socket_init();
-	}
-
-	if(socket_connect(fd1, servip, port, &serv_addr) < 0)
-	{
-		rc = -1;
-		while(cout < 5 && rc < 0)
-		{
-			rc = socket_reconnect(&serv_addr, cout);
-			cout++;
-		}		
-		
-		if(rc < 0)
-			return -3;
-		close(fd1);
-		fd1 = rc;
-	}
+    socket_init(&sock, host, port);
 
 	/* Initialize local database */
-	temporary_repo(&db);
-	while(1)
+	if(temporary_repo(&db) < 0)
+    {
+        continue;
+    }
+    
+    while(1)
 	{
-		get_time(time, sizeof(time));
+
+        if( wait_until(sleep_t))
+        {     
+            get_devid(&data, 001);  
+		    get_time(&(data.time), sizeof(data.time));
+		    if(read_temperature(&(data.temperature)) < 0)
+		    {
+		    	log_error("读取温度失败: %s", strerror(errno));
+			    continue;
+		    }
 	
-		if(read_temperature(&temp) < 0)
-		{
-			log_error("读取温度失败: %s", strerror(errno));
-			return -5;
-		}
-		log_debug("当前时间: %s, 温度: %.2f", time, temp);
+		    if(date_packet(&data, buf, sizeof(buf)) < 0)
+		    {
+		    	log_error("数据打包失败(%s, 温度: %.2f)", time, temp);
+		    	continue;
+		    }
+            sample_flag = 1;
+        }
+
+        if(if_connected(&sock) < 0)
+        {
+            socket_connect(&sock);
+        }
+
+        if(if_connected(&sock) < 0)
+        {
+            if(sample_flag == 1)
+            {
+                temp_data_in(db, buf);
+                sample_flag = 0;
+                continue;
+            }
+        }
+        
+        if(sample_flag == 1)
+        {
+		    rc = write(fd1, buf, strlen(buf));
+	    	if(rc < 0)
+		    {
+		    	log_info("数据存入本地临时库");	  
+                temp_data_in(db,buf);
+                sample_flag = 0;
+                continue;
+		    }   
+
+		    else
+		    {
+	    		log_info("发送%d个字节数据成功", rc);  
+                tempo_updata(db, buf, sizeof(buf), sock->fd);
+	    	}
+
+    	}
 	
-		if(date_packet(time, &temp, buf, sizeof(buf)) < 0)
-		{
-			log_error("数据打包失败(%s, 温度: %.2f)", time, temp);
-			return -6;
-		}
-		log_trace("数据完成打包: %s", buf);
+    	close(fd1);
 
-		rc = write(fd1, buf, strlen(buf));
-		if(rc < 0)
-		{
-				if(fd1 >= 0) close(fd1);
-				temporary_repo(&db);
-				log_warn("连接意外关闭，尝试重连(第%d次)", cout);
-				if((fd1 = socket_reconnect(&serv_addr, cout)) < 0)
-				{
-					log_info("数据存入本地临时库(第%d批)", cout);	
-					temp_data_in(db,buf);
-				}
-				
-				else 
-				{		
-					log_info("重连(第%d次)成功,将本地数据传入服务器", cout);
-					cout = 0;
-				}
-		}
-
-		else
-		{
-				log_info("发送%d个字节数据成功", rc);
-				stmt = data_exist(db);
-				if(stmt == NULL)
-				{
-					sqlite3_close(db);
-					continue;
-					
-				}
-
-				rs = SQLITE_OK;
-				log_debug("SQL准备就绪，开始遍历上传");
-				while((rs = sqlite3_step(stmt)) == SQLITE_ROW && updata_count < 10)
-				{
-					tempo_data_in(stmt, buf, sizeof(buf));
-					rc = write(fd1, buf, sizeof(buf));
-					if(rc > 0)
-					{
-						log_info("data reupdata.");
-						old_data_delete(db, "temp_recds");
-						updata_count++;
-
-						sqlite3_finalize(stmt);
-						stmt = data_exist(db);  // 重新准备
-						if(stmt == NULL)
-						{
-							log_error("重新准备SQL失败");
-							break;
-						}
-						continue;
-					}
-
-					else if(rc <= 0)
-					{
-						log_error("失去连接，错误: %s", strerror(errno));
-						break;
-					}	
-				}
-				sqlite3_finalize(stmt);
-				updata_count = 0;
-		}
-
-			sleep(sleep_t);
-	}
-	
-	close(fd1);
-
-	return 0;
+    	return 0;
 }

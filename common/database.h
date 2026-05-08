@@ -21,7 +21,7 @@ extern "C" {
 #include <stddef.h>
 extern int callback(void *NotUsed,int argc, char *argv[], char **azColName);
 
-extern int temp_data_in(sqlite3 *db, char	*json_buf);
+extern int temp_data_in(sqlite3 *db, char *json_buf);
 
 extern sqlite3_stmt* data_exist(sqlite3 *db);
 
@@ -29,7 +29,7 @@ extern int table_exist(sqlite3 *db);
 
 extern int temporary_repo(sqlite3 **db);
 
-extern void tempo_data_in(sqlite3_stmt *stmt, char *buf, size_t buf_size);
+extern void tempo_updata(sqlite3 *db, char *buf, size_t buf_size, int fd);
 
 extern int old_data_delete(sqlite3 *db, const char *table_name);
 

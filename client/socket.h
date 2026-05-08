@@ -20,13 +20,18 @@ extern "C" {
 
 #include <stddef.h>
 
-extern int socket_init();
+typedef struct socket_s
+{   
+    char        serv_host[64];          
+    int         port;
+    int         fd;
+} socket_t;
 
-extern int domain_handle(char *domain_name, int port, char *serv_ip);
+extern int socket_init(socket_t *sock, char *host, int port);
 
-extern int socket_connect(int fd, char *serv_ip, int port, struct sockaddr_in *serv_addr);
+extern int socket_connect(socket_t *sock);
 
-extern int socket_reconnect(struct sockaddr_in *serv_addr, int cout);
+extern int if_connected(socket_t *sock);
 
 #ifdef __cplusplus
 }
