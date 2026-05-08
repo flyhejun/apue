@@ -363,6 +363,115 @@ TARGET := cli_prog
 
 ---
 
+## 八、内存 / 资源泄漏
+
+### 错误 16：`while(1)` 死循环导致资源清理代码不可达
+
+**文件**: `client/socket_client.c`
+
+```c
+// 错误写法
+while(1)
+{
+    // ... 业务逻辑 ...
+}
+close(sock.fd);      // ← 永远执行不到，fd 泄漏
+sqlite3_close(db);   // ← 永远执行不到，db 泄漏
+
+// 正确写法 — 用信号控制循环退出
+static volatile sig_atomic_t g_running = 1;
+
+static void sig_handler(int signum) { g_running = 0; }
+
+signal(SIGINT, sig_handler);
+
+while(g_running)     // ← 收到 Ctrl+C 后退出
+{
+    // ...
+}
+close(sock.fd);      // ← 现在可以执行到了
+sqlite3_close(db);
+```
+
+**原理**: `while(1)` 是无条件死循环，后面的代码永远不会执行。进程退出时 OS 会回收，但：
+- 数据库可能有未 flush 的数据丢失
+- socket 的 FIN 包不会发送，对端需要等超时才知道你断了
+
+**记忆口诀**: 死循环要留"出口"，信号处理是钥匙。
+
+---
+
+### 错误 17：函数关闭了不属于自己的资源（越权释放）
+
+**文件**: `common/database.c`
+
+```c
+// 错误写法 — data_exist 不拥有 db，不应该关闭它
+sqlite3_stmt* data_exist(sqlite3 *db)
+{
+    ...
+    if(stmt == NULL)
+    {
+        sqlite3_close(db);  // ← BUG: db 是调用者的！
+        return NULL;
+    }
+    return stmt;
+}
+
+// 正确写法 — 只管自己的资源
+sqlite3_stmt* data_exist(sqlite3 *db)
+{
+    ...
+    if(stmt == NULL)
+    {
+        return NULL;         // ← db 留给调用者管理
+    }
+    return stmt;
+}
+```
+
+**原理**: 资源由谁创建/打开，就由谁负责关闭。这条规则叫 **所有权 (ownership)** 原则。
+
+如果 `data_exist` 关闭了 `db`：
+- 调用者后续用 `db` → use-after-close → 未定义行为
+- 调用者最后再 `sqlite3_close(db)` → double-close → 崩溃
+
+**所有权速查表**:
+```
+谁打开        谁关闭           备注
+sqlite3_open  sqlite3_close    同一作用域
+malloc        free             同一所有权链
+fopen         fclose           同一文件句柄
+socket()      close()          同一 fd
+getaddrinfo() freeaddrinfo()   同一 result
+```
+
+---
+
+### 错误 18：函数返回值未检查，失败后继续使用无效资源
+
+**文件**: `server/socket_server.c`
+
+```c
+// 错误写法
+temporary_repo(&db);           // ← 没检查返回值
+log_info("数据库连接成功");     // ← 失败了也打印成功
+// ... 后续用 db 操作 → 可能崩溃
+
+// 正确写法
+if(temporary_repo(&db) < 0)
+{
+    log_error("数据库初始化失败");
+    close(listen_fd);
+    return -4;
+}
+log_info("数据库连接成功");
+```
+
+**防错要点**: 所有返回错误码的函数，调用后必须先判断再使用。特别是涉及资源分配的函数（open/malloc/socket/sqlite3_open）。
+
+---
+
 ## 总结：错误分类统计
 
 | 错误类别 | 数量 | 涉及文件 |
@@ -374,20 +483,34 @@ TARGET := cli_prog
 | 逻辑 / 运行时 | 3 | socket_server.c, socket_client.c |
 | 类型安全 | 1 | socket_server.h |
 | 环境适配 | 1 | 所有 Makefile |
-| **合计** | **15** | |
+| 内存 / 资源泄漏 | 3 | socket_client.c, database.c, socket_server.c |
+| **合计** | **18** | |
 
 ---
 
 ## 编码检查清单（每次写完代码自查）
 
+### 基础语法
 - [ ] 每个变量在使用前都有定义
 - [ ] 函数声明（.h）和实现（.c）的签名一致
 - [ ] 数组传参用 `strncpy`，不是 `=`
 - [ ] 结构体变量用 `.`，结构体指针用 `->`
 - [ ] `sizeof` 用于数组时，除以 `sizeof(元素)` 得到个数
 - [ ] `while(1)` 内没有意外的 `return`
+- [ ] `continue`/`break` 只在循环/switch 内
+
+### 头文件
 - [ ] 头文件保护 `#ifndef` 包裹了所有内容
 - [ ] 头文件中用到的每个类型都有对应的 `#include`
+- [ ] 第三方库函数名从头文件确认，不凭记忆手写
+
+### 资源管理
+- [ ] 每个 `open`/`malloc`/`socket`/`sqlite3_open` 都有对应的 `close`/`free`/`sqlite3_close`
+- [ ] 错误路径上也要释放已分配的资源
+- [ ] 不关闭不属于自己（不拥有所有权）的资源
+- [ ] `while(1)` 死循环有信号处理等退出机制
+- [ ] 函数返回值（尤其是资源分配函数）必须检查
+
+### 构建
 - [ ] Makefile 用相对路径，不用绝对路径
 - [ ] 信号变量用 `volatile sig_atomic_t`
-- [ ] 第三方库函数名从头文件确认，不凭记忆手写

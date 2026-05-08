@@ -146,7 +146,12 @@ int main (int argc, char **argv)
 
 	listen(listen_fd, BACKLOG);
 
-	temporary_repo(&db);
+	if(temporary_repo(&db) < 0)
+	{
+		log_error("数据库初始化失败");
+		close(listen_fd);
+		return -4;
+	}
 	log_info("数据库和数据表连接成功");
 	
 	if((epfd = socket_epoll_init(listen_fd)) < 0)

@@ -77,7 +77,6 @@ sqlite3_stmt* data_exist(sqlite3 *db)
 
     if(stmt == NULL)
     {
-        sqlite3_close(db);
         return NULL;
     }
 

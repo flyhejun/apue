@@ -24,6 +24,7 @@
 #include <time.h>
 #include <getopt.h>
 #include <sqlite3.h>
+#include <signal.h>
 
 #include "socket_client.h"
 #include "ds18b20.h"
@@ -32,6 +33,13 @@
 #include "cJSON.h"
 #include "log.h"
 #include "socket.h"
+
+static volatile sig_atomic_t g_running = 1;
+
+static void sig_handler(int signum)
+{
+	g_running = 0;
+}
 
 static void print_usage(char *program)
 {
@@ -76,8 +84,6 @@ int main(int argc, char *argv[])
 	char 					buf[512];
 
     data_t                  data;
-    /*time var*/
-	char					time_str[64];
 
     /*temp var*/
 	int						sleep_t = 5;
@@ -94,10 +100,11 @@ int main(int argc, char *argv[])
 
     int                     sample_flag = 0;
 	int 					rc = 0;
-	int						updata_count = 0;
 	sqlite3 				*db = NULL;
 
 	memset(host, 0, sizeof(host));
+	memset(&sock, 0, sizeof(sock));
+	sock.fd = -1;
 
 	while ((ch = getopt_long(argc, argv, "i:p:hs:d:", opts, NULL)) != -1)
 	{
@@ -135,6 +142,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	signal(SIGINT, sig_handler);
+	signal(SIGTERM, sig_handler);
+
     socket_init(&sock, host, port);
 
 	/* Initialize local database */
@@ -144,7 +154,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    while(1)
+    while(g_running)
 	{
 
         if( wait_until(sleep_t))
@@ -200,7 +210,10 @@ int main(int argc, char *argv[])
     	}
 	}
 
-	close(sock.fd);
-	sqlite3_close(db);
+	log_info("收到退出信号，正在清理资源...");
+	if(sock.fd >= 0)
+		close(sock.fd);
+	if(db)
+		sqlite3_close(db);
 	return 0;
 }
