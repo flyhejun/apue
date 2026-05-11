@@ -54,12 +54,8 @@ static void print_usage(char *program)
 
 void get_time(char *time_str, size_t time_len)
 {
-	time_t 			t;
-	struct tm		*lt = NULL;
-
-	t = time(NULL);
-	lt = localtime(&t);
-	strftime(time_str, time_len, "%Y-%m-%d %H:%M:%S", lt);
+    time_t t = time(NULL);
+    strftime(time_str, time_len, "%Y-%m-%d %H:%M:%S", localtime(&t));
 }
 
 int wait_until(long sleep_time)
@@ -67,7 +63,7 @@ int wait_until(long sleep_time)
     static time_t   last = 0;
     time_t          now = time(NULL);
 
-    if(last == 0 || difftime(now, last) >= sleep_time)
+    if(difftime(now, last) >= sleep_time)
     {
         last = now;
         return 1;
