@@ -82,7 +82,6 @@ int main(int argc, char *argv[])
 	char                    host[64];
     int						port = 0;
 	char 					buf[512];
-
     data_t                  data;
 
     /*temp var*/
@@ -156,7 +155,8 @@ int main(int argc, char *argv[])
 
     while(g_running)
 	{
-
+        sample_flag = 0;
+        
         if( wait_until(sleep_t))
         {
             get_devid(&data, 1);
@@ -185,7 +185,6 @@ int main(int argc, char *argv[])
             if(sample_flag == 1)
             {
                 temp_data_in(db, buf);
-                sample_flag = 0;
                 continue;
             }
         }
@@ -197,23 +196,23 @@ int main(int argc, char *argv[])
 		    {
 		    	log_info("数据存入本地临时库");
                 temp_data_in(db, buf);
-                sample_flag = 0;
                 continue;
 		    }
-
-		    else
-		    {
-	    		log_info("发送%d个字节数据成功", rc);
-                tempo_updata(db, buf, sizeof(buf), sock.fd);
-	    	}
-            sample_flag = 0;
     	}
+
+        tempo_updata(db, buf, sizeof(buf), sock.fd);
 	}
 
 	log_info("收到退出信号，正在清理资源...");
 	if(sock.fd >= 0)
-		close(sock.fd);
-	if(db)
-		sqlite3_close(db);
-	return 0;
+    {	
+        close(sock.fd);
+    }
+
+    if(db)
+    {
+        sqlite3_close(db);
+    }
+
+    return 0;
 }
