@@ -21,16 +21,13 @@ extern "C" {
 #include <stddef.h>
 #include <sqlite3.h>
 
-struct socket_s;
-typedef struct socket_s socket_t;
-
 extern int db_write(sqlite3 *db, char *json_buf);
 
 extern sqlite3_stmt* db_exist(sqlite3 *db);
 
 extern int db_open(sqlite3 **db);
 
-extern int db_read(sqlite3 *db, char *buf, size_t buf_size, socket_t *sock);
+extern int db_read(sqlite3 *db, char *buf, size_t buf_size);
 
 extern int db_delete(sqlite3 *db, const char *table_name);
 

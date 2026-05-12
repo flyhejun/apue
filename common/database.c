@@ -22,8 +22,6 @@
 #include "database.h"
 #include "cJSON.h"
 #include "log.h"
-#include "socket.h"
-
 sqlite3_stmt* db_exist(sqlite3 *db)
 {
     char            *sql = "SELECT DATA FROM TEMP_RECDS";
@@ -96,13 +94,13 @@ int db_write(sqlite3 *db, char *json_buf)
     return 0;
 }
 
-int db_read(sqlite3 *db, char *buf, size_t buf_size, socket_t *sock)
+int db_read(sqlite3 *db, char *buf, size_t buf_size)
 {
     sqlite3_stmt        *stmt;
     const unsigned char *data = NULL;
 
     stmt = db_exist(db);
-    if(!stmt) 
+    if(!stmt)
         return -1;
 
     if(sqlite3_step(stmt) != SQLITE_ROW)
@@ -119,13 +117,6 @@ int db_read(sqlite3 *db, char *buf, size_t buf_size, socket_t *sock)
     }
 
     sqlite3_finalize(stmt);
-
-    if(socket_send(sock, buf, strlen(buf)) < 0)
-    {
-        log_error("失去连接，错误: %s", strerror(errno));
-        return -3;
-    }
-    log_info("data reupdata.");
     return 0;
 }
 
