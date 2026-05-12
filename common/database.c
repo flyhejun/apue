@@ -83,7 +83,7 @@ int db_write(sqlite3 *db, char *json_buf)
     sqlite3_bind_text(stmt, 1, json_buf, -1, SQLITE_STATIC);
 
     rc = sqlite3_step(stmt);
-    if(rc != SQLITE_OK)
+    if(rc != SQLITE_DONE)
     {
         printf("step to table failure: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
