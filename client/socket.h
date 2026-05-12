@@ -31,7 +31,7 @@ extern int socket_init(socket_t *sock, char *host, int port);
 
 extern int socket_connect(socket_t *sock);
 
-extern int if_connected(socket_t *sock);
+extern int socket_check(socket_t *sock);
 
 #ifdef __cplusplus
 }

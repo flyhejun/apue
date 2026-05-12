@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     socket_init(&sock, host, port);
 
 	/* Initialize local database */
-	if(temporary_repo(&db) < 0)
+	if(db_open(&db) < 0)
     {
         log_error("初始化本地数据库失败");
         return -1;
@@ -171,12 +171,12 @@ int main(int argc, char *argv[])
             sample_flag = 1;
         }
 
-        if(if_connected(&sock) < 0)
+        if(socket_check(&sock) < 0)
         {
             socket_connect(&sock);
         }
 
-        if(if_connected(&sock) < 0)
+        if(socket_check(&sock) < 0)
         {
             if(sample_flag == 1)
             {
@@ -191,12 +191,12 @@ int main(int argc, char *argv[])
 	    	if(rc < 0)
 		    {
 		    	log_info("数据存入本地临时库");
-                temp_data_in(db, buf);
+                db_write(db, buf);
                 continue;
 		    }
     	}
 
-        tempo_updata(db, buf, sizeof(buf), sock.fd);
+        db_read(db, buf, sizeof(buf), sock.fd);
 	}
 
 	log_info("收到退出信号，正在清理资源...");

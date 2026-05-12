@@ -94,7 +94,7 @@ int socket_connect(socket_t *sock)
     return rs;
 }
 
-int if_connected(socket_t *sock)
+int socket_check(socket_t *sock)
 {
     struct tcp_info     info;
     int                 len = sizeof(info);

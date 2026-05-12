@@ -35,32 +35,6 @@ int callback(void *NotUsed, int argc, char *argv[], char **azColName)
 	return 0;
 }
 
-int table_exist(sqlite3 *db)
-{
-	const char 			*table_name = "TEMP_RECDS";
-	const char			*sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
-	sqlite3_stmt		*stmt;
-	int					exist = 0;
-	
-	int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-	if(rc != SQLITE_OK)
-	{
-		printf("prepare failure: %s\n", sqlite3_errmsg(db));
-		return -1;
-	}
-
-	sqlite3_bind_text(stmt, 1, table_name, -1, SQLITE_STATIC);
-
-	if(sqlite3_step(stmt) == SQLITE_ROW)
-	{
-		exist = 1;
-	}
-
-	sqlite3_finalize(stmt);
-
-	return exist;
-}
-
 sqlite3_stmt* data_exist(sqlite3 *db)
 {
     char            *sql = "SELECT DATA FROM TEMP_RECDS";
@@ -82,8 +56,7 @@ sqlite3_stmt* data_exist(sqlite3 *db)
 
     return stmt;
 }
-
-int temporary_repo(sqlite3 **db)
+int db_open(sqlite3 **db)
 {
     char            *zErrMsg = NULL;
     char            *sql = NULL;
@@ -95,22 +68,19 @@ int temporary_repo(sqlite3 **db)
         return -1;
     }
 
-    if(table_exist(*db) != 1)
-    {
-        sql = "CREATE TABLE TEMP_RECDS(DATA TEXT NOT NULL);";
+    sql = "CREATE TABLE IF NOT EXISTS TEMP_RECDS(DATA TEXT NOT NULL);";
 
-        rc = sqlite3_exec(*db, sql, callback, 0, &zErrMsg);
-        if(rc != SQLITE_OK)
-        {
-            log_error("SQL操作失败: %s", zErrMsg);
-            sqlite3_free(zErrMsg);
-            return -1;
-        }
+    rc = sqlite3_exec(*db, sql, callback, 0, &zErrMsg);
+    if(rc != SQLITE_OK)
+    {
+        log_error("SQL操作失败: %s", zErrMsg);
+        sqlite3_free(zErrMsg);
+        return -1;
     }
     return 0;
 }
 
-int temp_data_in(sqlite3 *db, char *json_buf)
+int db_write(sqlite3 *db, char *json_buf)
 {
     char         *sql = NULL;
     sqlite3_stmt *stmt;
@@ -137,7 +107,7 @@ int temp_data_in(sqlite3 *db, char *json_buf)
     return 0;
 }
 
-void tempo_updata(sqlite3 *db, char *buf, size_t buf_size, int fd)
+void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
 {
     sqlite3_stmt        *stmt;
     const unsigned char *data = NULL;
@@ -170,7 +140,7 @@ void tempo_updata(sqlite3 *db, char *buf, size_t buf_size, int fd)
     return ;
 }
 
-int old_data_delete(sqlite3 *db, const char *table_name)
+int db_delete(sqlite3 *db, const char *table_name)
 {
 	char 		sql[256];
 

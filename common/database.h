@@ -22,17 +22,15 @@ extern "C" {
 #include <sqlite3.h>
 extern int callback(void *NotUsed,int argc, char *argv[], char **azColName);
 
-extern int temp_data_in(sqlite3 *db, char *json_buf);
+extern int db_write(sqlite3 *db, char *json_buf);
 
 extern sqlite3_stmt* data_exist(sqlite3 *db);
 
-extern int table_exist(sqlite3 *db);
+extern int db_open(sqlite3 **db);
 
-extern int temporary_repo(sqlite3 **db);
+extern void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd);
 
-extern void tempo_updata(sqlite3 *db, char *buf, size_t buf_size, int fd);
-
-extern int old_data_delete(sqlite3 *db, const char *table_name);
+extern int db_delete(sqlite3 *db, const char *table_name);
 
 #ifdef __cplusplus
 
