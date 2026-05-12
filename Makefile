@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -g -Icommon
+CFLAGS := -Wall -g -Icommon -Iclient
 AR := ar
 ARFLAGS := rcs
 

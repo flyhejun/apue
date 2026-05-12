@@ -20,7 +20,9 @@ extern "C" {
 
 #include <stddef.h>
 #include <sqlite3.h>
-#include "socket.h"
+
+struct socket_s;
+typedef struct socket_s socket_t;
 
 extern int db_write(sqlite3 *db, char *json_buf);
 
