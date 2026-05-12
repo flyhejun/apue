@@ -108,7 +108,6 @@ int db_read(sqlite3 *db, char *buf, size_t buf_size, socket_t *sock)
     if(sqlite3_step(stmt) != SQLITE_ROW)
     {
         sqlite3_finalize(stmt);
-        log_error("库内无数据");
         return -2;
     }
 
