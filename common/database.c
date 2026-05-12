@@ -35,7 +35,7 @@ int callback(void *NotUsed, int argc, char *argv[], char **azColName)
 	return 0;
 }
 
-sqlite3_stmt* data_exist(sqlite3 *db)
+sqlite3_stmt* db_exist(sqlite3 *db)
 {
     char            *sql = "SELECT DATA FROM TEMP_RECDS";
     int             rs;
@@ -107,19 +107,19 @@ int db_write(sqlite3 *db, char *json_buf)
     return 0;
 }
 
-void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
+int db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
 {
     sqlite3_stmt        *stmt;
     const unsigned char *data = NULL;
 
-    stmt = data_exist(db);
+    stmt = db_exist(db);
     if(!stmt) return;
 
     if(sqlite3_step(stmt) != SQLITE_ROW)
     {
         sqlite3_finalize(stmt);
         log_error("库内无数据");
-        return ;
+        return -1;
     }
 
     memset(buf, 0, buf_size);
@@ -134,10 +134,10 @@ void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
     if(write(fd, buf, strlen(buf)) < 0)
     {
         log_error("失去连接，错误: %s", strerror(errno));
-        return ;          
+        return -2;          
     }
     log_info("data reupdata.");
-    return ;
+    return 0;
 }
 
 int db_delete(sqlite3 *db, const char *table_name)
