@@ -65,9 +65,10 @@ void sig_handler(int signum)
 void print_usage(char *program)
 {
 	printf("%s usage: \n", program);
-	printf("  -p(--port): sepcify listen port.\n");
-	printf("  -h(--Help): print this help information.\n");
-	return ; 
+	printf("  -p(--port): specify listen port.\n");
+	printf("  -d(--debug): run in foreground (debug mode).\n");
+	printf("  -h(--help): print this help information.\n");
+	return ;
 }
 
 
@@ -90,6 +91,7 @@ int main (int argc, char **argv)
 	int						ch;
 	struct option			opts[] = {
 							{"port", required_argument, NULL, 'p'},
+							{"debug", no_argument, NULL, 'd'},
 							{"help", no_argument, NULL, 'h'},
 							{NULL, 0, NULL, 0}
 	};
@@ -100,14 +102,18 @@ int main (int argc, char **argv)
 	int 					i,j;
 	struct epoll_event		events[MAX_EVENTS];
 
-	while((ch = getopt_long(argc, argv, "p:h", opts, NULL)) != -1)
+	while((ch = getopt_long(argc, argv, "p:dh", opts, NULL)) != -1)
 	{
 		switch(ch)
 		{
 			case 'p':
 				port = atoi(optarg);
 				break;
-			
+
+			case 'd':
+				debug = 1;
+				break;
+
 			case 'h':
 				print_usage(argv[0]);
 				break;
