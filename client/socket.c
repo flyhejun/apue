@@ -17,12 +17,14 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
 #include "log.h"
+#include "socket.h"
 
 int socket_init(socket_t *sock, char *host, int port)
 {

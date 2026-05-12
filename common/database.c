@@ -113,13 +113,14 @@ int db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
     const unsigned char *data = NULL;
 
     stmt = db_exist(db);
-    if(!stmt) return;
+    if(!stmt) 
+        return -1;
 
     if(sqlite3_step(stmt) != SQLITE_ROW)
     {
         sqlite3_finalize(stmt);
         log_error("库内无数据");
-        return -1;
+        return -2;
     }
 
     memset(buf, 0, buf_size);
@@ -134,7 +135,7 @@ int db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
     if(write(fd, buf, strlen(buf)) < 0)
     {
         log_error("失去连接，错误: %s", strerror(errno));
-        return -2;          
+        return -3;          
     }
     log_info("data reupdata.");
     return 0;

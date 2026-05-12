@@ -19,7 +19,9 @@ extern "C" {
 
 #include <stddef.h>
 
-void get_time(char *time, size_t time_len);
+extern void get_time(char *time_str, size_t time_len);
+
+extern int wait_until(long sleep_time);
 
 #ifdef __cplusplus
 }
