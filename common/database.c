@@ -22,18 +22,7 @@
 #include "database.h"
 #include "cJSON.h"
 #include "log.h"
-				
-
-int callback(void *NotUsed, int argc, char *argv[], char **azColName)
-{
-	int	i;
-	for(i=0; i<argc; i++)
-	{
-		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : NULL);
-	}
-	printf("\n");
-	return 0;
-}
+#include "socket.h"
 
 sqlite3_stmt* data_exist(sqlite3 *db)
 {
@@ -70,7 +59,7 @@ int db_open(sqlite3 **db)
 
     sql = "CREATE TABLE IF NOT EXISTS TEMP_RECDS(DATA TEXT NOT NULL);";
 
-    rc = sqlite3_exec(*db, sql, callback, 0, &zErrMsg);
+    rc = sqlite3_exec(*db, sql, NULL, NULL, &zErrMsg);
     if(rc != SQLITE_OK)
     {
         log_error("SQL操作失败: %s", zErrMsg);
@@ -107,7 +96,7 @@ int db_write(sqlite3 *db, char *json_buf)
     return 0;
 }
 
-void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
+void db_read(sqlite3 *db, char *buf, size_t buf_size, socket_t *sock)
 {
     sqlite3_stmt        *stmt;
     const unsigned char *data = NULL;
@@ -131,10 +120,10 @@ void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd)
 
     sqlite3_finalize(stmt);
 
-    if(write(fd, buf, strlen(buf)) < 0)
+    if(socket_send(sock, buf, strlen(buf)) < 0)
     {
         log_error("失去连接，错误: %s", strerror(errno));
-        return ;          
+        return ;
     }
     log_info("data reupdata.");
     return ;

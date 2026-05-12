@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 		    }
     	}
 
-        db_read(db, buf, sizeof(buf), sock.fd);
+        db_read(db, buf, sizeof(buf), &sock);
 	}
 
 	log_info("收到退出信号，正在清理资源...");

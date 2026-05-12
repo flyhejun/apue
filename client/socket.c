@@ -123,19 +123,24 @@ int socket_check(socket_t *sock)
 
 int socket_send(socket_t *sock, const char *buf, size_t len)
 {
+    size_t  sent = 0;
     int     rc;
 
     if(!sock || sock->fd < 0 || !buf)
         return -1;
 
-    rc = send(sock->fd, buf, len, 0);
-    if(rc < 0)
+    while(sent < len)
     {
-        log_error("发送数据失败: %s", strerror(errno));
-        return -1;
+        rc = send(sock->fd, buf + sent, len - sent, 0);
+        if(rc < 0)
+        {
+            log_error("发送数据失败: %s", strerror(errno));
+            return -1;
+        }
+        sent += rc;
     }
 
-    return rc;
+    return sent;
 }
 
 int socket_recv(socket_t *sock, char *buf, size_t buf_len)
