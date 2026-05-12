@@ -196,7 +196,13 @@ int main(int argc, char *argv[])
 		    }
     	}
 
-        db_read(db, buf, sizeof(buf), sock.fd);
+       if( db_read(db, buf, sizeof(buf), sock.fd) == 0)
+       {
+            if(db_delete(db, TEMP_RECDS) < 0)
+            {
+                continue;
+            }
+       }
 	}
 
 	log_info("收到退出信号，正在清理资源...");
