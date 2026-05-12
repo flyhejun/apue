@@ -196,12 +196,15 @@ int main(int argc, char *argv[])
 		    }
     	}
 
-       if( db_read(db, buf, sizeof(buf), &sock) == 0)
+       if(socket_check(&sock) == 0)
        {
-            if(db_delete(db, "TEMP_RECDS") < 0)
-            {
-                continue;
-            }
+           if( db_read(db, buf, sizeof(buf), &sock) == 0)
+           {
+                if(db_delete(db, "TEMP_RECDS") < 0)
+                {
+                    continue;
+                }
+           }
        }
 	}
 
