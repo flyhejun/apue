@@ -32,6 +32,8 @@ extern void db_read(sqlite3 *db, char *buf, size_t buf_size, int fd);
 
 extern int db_delete(sqlite3 *db, const char *table_name);
 
+extern int db_close(sqlite3 *db);
+
 #ifdef __cplusplus
 
 }

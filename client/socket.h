@@ -33,6 +33,12 @@ extern int socket_connect(socket_t *sock);
 
 extern int socket_check(socket_t *sock);
 
+extern int socket_send(socket_t *sock, const char *buf, size_t len);
+
+extern int socket_recv(socket_t *sock, char *buf, size_t buf_len);
+
+extern int socket_close(socket_t *sock);
+
 #ifdef __cplusplus
 }
 #endif

@@ -139,25 +139,25 @@ int main (int argc, char **argv)
 
 	if(socket_bind(listen_fd, port, &serv_addr) < 0)
 	{
-		close(listen_fd);
+		socket_close(listen_fd);
 		return -2;
 	}
 	printf("socket[%d] bind on port[%d] successfully!\n", listen_fd, port);
 
 	listen(listen_fd, BACKLOG);
 
-	if(temporary_repo(&db) < 0)
+	if(db_open(&db) < 0)
 	{
 		log_error("数据库初始化失败");
-		close(listen_fd);
+		socket_close(listen_fd);
 		return -4;
 	}
 	log_info("数据库和数据表连接成功");
 	
 	if((epfd = socket_epoll_init(listen_fd)) < 0)
 	{
-		close(listen_fd);
-		sqlite3_close(db);
+		socket_close(listen_fd);
+		db_close(db);
 		return -3;
 	}
 
@@ -168,15 +168,15 @@ int main (int argc, char **argv)
 		for(i=0; i<j; i++)
 		{
 			memset(buf, 0, sizeof(buf));
-			rv = read(ep_fds[i], buf, sizeof(buf));
+			rv = socket_recv(ep_fds[i], buf, sizeof(buf));
 			if(rv <= 0)
 			{
 				log_error("socket[%d] 断开连接", ep_fds[i]);
 				epoll_ctl(epfd, EPOLL_CTL_DEL, ep_fds[i], NULL);
-				close(ep_fds[i]);
+				socket_close(ep_fds[i]);
 				continue;
 			}                    
-			if(temp_data_in(db, buf) == 0)
+			if(db_write(db, buf) == 0)
 			{                    
 				log_info("成功记录新数据");
 			}
@@ -184,9 +184,9 @@ int main (int argc, char **argv)
 	}
 
 
-	close(epfd);
-	sqlite3_close(db);
-	close(listen_fd);
+	socket_close(epfd);
+	db_close(db);
+	socket_close(listen_fd);
 	return 0;
 }
 

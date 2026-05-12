@@ -32,6 +32,14 @@ extern int socket_epoll_init(int fd);
 
 extern int socket_epoll(int epfd, int fd, struct epoll_event *events, size_t events_size, int *fds);
 
+extern int socket_accept(int fd);
+
+extern int socket_recv(int fd, char *buf, size_t buf_len);
+
+extern int socket_send(int fd, const char *buf, size_t len);
+
+extern int socket_close(int fd);
+
 #ifdef __cplusplus
 }
 #endif

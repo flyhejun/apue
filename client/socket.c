@@ -121,3 +121,55 @@ int socket_check(socket_t *sock)
     }
 }
 
+int socket_send(socket_t *sock, const char *buf, size_t len)
+{
+    int     rc;
+
+    if(!sock || sock->fd < 0 || !buf)
+        return -1;
+
+    rc = send(sock->fd, buf, len, 0);
+    if(rc < 0)
+    {
+        log_error("发送数据失败: %s", strerror(errno));
+        return -1;
+    }
+
+    return rc;
+}
+
+int socket_recv(socket_t *sock, char *buf, size_t buf_len)
+{
+    int     rc;
+
+    if(!sock || sock->fd < 0 || !buf)
+        return -1;
+
+    rc = recv(sock->fd, buf, buf_len - 1, 0);
+    if(rc < 0)
+    {
+        log_error("接收数据失败: %s", strerror(errno));
+        return -1;
+    }
+
+    if(rc > 0)
+        buf[rc] = '\0';
+
+    return rc;
+}
+
+int socket_close(socket_t *sock)
+{
+    if(!sock)
+        return -1;
+
+    if(sock->fd >= 0)
+    {
+        close(sock->fd);
+        sock->fd = -1;
+    }
+
+    memset(sock->serv_host, 0, sizeof(sock->serv_host));
+    sock->port = 0;
+    return 0;
+}

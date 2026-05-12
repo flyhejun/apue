@@ -154,3 +154,17 @@ int db_delete(sqlite3 *db, const char *table_name)
 	}
 	return 0;
 }
+
+int db_close(sqlite3 *db)
+{
+    if(!db)
+        return -1;
+
+    if(sqlite3_close(db) != SQLITE_OK)
+    {
+        log_error("关闭数据库失败: %s", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    return 0;
+}

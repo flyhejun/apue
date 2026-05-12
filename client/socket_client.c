@@ -180,14 +180,14 @@ int main(int argc, char *argv[])
         {
             if(sample_flag == 1)
             {
-                temp_data_in(db, buf);
+                db_write(db, buf);
                 continue;
             }
         }
 
         if(sample_flag == 1)
         {
-		    rc = write(sock.fd, buf, strlen(buf));
+		    rc = socket_send(&sock, buf, strlen(buf));
 	    	if(rc < 0)
 		    {
 		    	log_info("数据存入本地临时库");
@@ -202,12 +202,12 @@ int main(int argc, char *argv[])
 	log_info("收到退出信号，正在清理资源...");
 	if(sock.fd >= 0)
     {	
-        close(sock.fd);
+        socket_close(&sock);
     }
 
     if(db)
     {
-        sqlite3_close(db);
+        db_close(db);
     }
 
     return 0;

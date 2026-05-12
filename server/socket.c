@@ -205,3 +205,67 @@ int socket_reconnect(struct sockaddr_in *serv_addr, int cout)
 
 	return cli_fd;
 }
+
+int socket_accept(int fd)
+{
+	int						cli_fd;
+	struct sockaddr_in		cli_addr;
+	socklen_t				addr_len = sizeof(cli_addr);
+
+	cli_fd = accept(fd, (struct sockaddr *)&cli_addr, &addr_len);
+	if(cli_fd < 0)
+	{
+		log_error("接受新连接失败: %s", strerror(errno));
+		return -1;
+	}
+
+	log_info("连接上了新客户端[%s:%d], fd[%d]",
+			inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), cli_fd);
+	return cli_fd;
+}
+
+int socket_recv(int fd, char *buf, size_t buf_len)
+{
+	int		rc;
+
+	if(fd < 0 || !buf)
+		return -1;
+
+	rc = recv(fd, buf, buf_len - 1, 0);
+	if(rc < 0)
+	{
+		log_error("接收数据失败: %s", strerror(errno));
+		return -1;
+	}
+
+	if(rc > 0)
+		buf[rc] = '\0';
+
+	return rc;
+}
+
+int socket_send(int fd, const char *buf, size_t len)
+{
+	int		rc;
+
+	if(fd < 0 || !buf)
+		return -1;
+
+	rc = send(fd, buf, len, 0);
+	if(rc < 0)
+	{
+		log_error("发送数据失败: %s", strerror(errno));
+		return -1;
+	}
+
+	return rc;
+}
+
+int socket_close(int fd)
+{
+	if(fd < 0)
+		return -1;
+
+	close(fd);
+	return 0;
+}
